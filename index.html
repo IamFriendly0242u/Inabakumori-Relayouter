@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik&display=swap" rel="stylesheet"> -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="backgroundScroller">
+</div>
+<canvas id="audiovisualizer"></canvas>
+<div id="timeDisplay">
+    <div id="time">12:100PM</div>
+    <div id="date">
+        hanglasa
+    </div>
+</div>
+<div id="timeDisplayBigger">
+    <div id="time1">12:100PM</div>
+    <div id="date1">
+        hanglasa
+    </div>
+</div>
+<div id="pageSelector">
+    <i id="left"><img src="assets/icons/icons8-back-16.png"></i>
+    <i id="center"><img src="assets/icons/icons8-video-32.png"></i>
+    <i id="right"><img src="assets/icons/icons8-forward-16.png"></i>
+</div>
+
+<div id="calendar-wrapper">
+    <div id="calendar-header">
+        <div id="monthDisplay">JANUARY</div>
+        <div id="wholeDate">January 27, 2024</div>
+    </div>
+    <div class="weekdays-header">
+        <div>Sun</div>
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+    </div>
+    <div id="days-wrapper">
+    </div>
+</div>
+
+<div id="media-container">
+    <div id="media-wrapper">
+        <div id="media-image">
+            <i id="switch-menu"><img src="assets/icons/icons8-playlist-32.png"></i>
+            <i id="settings-menu"><img src="assets/icons/icons8-wrench-32.png"></i>
+        </div>
+
+        <div id="media-properties">
+            <div id="media-title-wrapper">
+                <div id="media-title-track">
+                    <span id="media-title">Not Playing Music</span>
+                </div>
+            </div>
+
+            <div id="media-album-wrapper">
+                <div id="media-album-track">
+                    <span id="media-album"></span>
+                </div>
+            </div>
+
+            <div id="media-meta">
+                <div id="media-artist-wrapper">
+                    <div id="media-artist-track">
+                        <span id="media-artist"></span>
+                    </div>
+                </div>
+
+                <div id="media-release"></div>
+            </div>
+
+            <!-- SPOTIFY SYNCED LYRICS CONTAINER WITH SLIDE WRAPPER -->
+            <div id="media-lyrics-container">
+                <div id="media-lyrics-wrapper">
+                    <div id="media-lyric-current"></div>
+                    <div id="media-lyric-next"></div>
+                </div>
+            </div>
+
+            <div class="slider-wrapper">
+                <div class="media-time">
+                    <div id="time-elapsed">--:--</div>
+                    <div id="song-duration">--:--</div>
+                </div>
+                <input type="range" id="media-slider" min="0" max="100">
+            </div>
+
+            <div id="media-buttons">
+                <i id="media-info"></i>
+                <i id="media-previous"><img src="assets/icons/icons8-skip-to-start-16.png"></i>
+                <i id="media-play"><img src="assets/icons/icons8-play-16.png"></i>
+                <i id="media-pause" class="hide-pause-play"><img src="assets/icons/icons8-pause-16.png"></i>
+                <i id="media-next"><img src="assets/icons/icons8-end-16.png"></i>
+                <i id="media-repeat"></i>
+            </div>
+        </div>
+        <div id="media-playlist" class="hide-properties">
+            <div class="media-header">
+                <i><img src="assets/icons/icons8-back-16.png" id="media-left"></i>
+                <p>Inabakumori Songs</p>
+                <i><img src="assets/icons/icons8-forward-16.png" id="media-right"></i>
+            </div>
+            <div id="media-playlist-list"></div>
+        </div>
+        <div id="settings-panel">
+            <div class="info-content">
+
+                <div id="settings-title" class="settings-title">Settings</div>
+
+                <div class="info-section">
+
+                    <div id="settings-content"></div>
+
+                </div>
+
+            </div>
+        </div>
+        <div id="media-info-panel">
+            <div class="info-content">
+
+                <div class="info-header">
+                    <div id="info-cover"></div>
+                    <div class="info-main">
+                        <div id="info-title"></div>
+                        <div id="info-artist"></div>
+                    </div>
+                </div>
+
+                <div class="info-section" id="info-section">
+
+                    <div class="info-switch">
+                        <span id="info-prev">‹</span>
+                        <div id="info-category">Description</div>
+                        <span id="info-next">›</span>
+                    </div>
+
+                    <div id="info-content-display"></div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script src="https://kit.fontawesome.com/b9c1de485e.js" crossorigin="anonymous"></script>
+<script src="jsmediatags.min.js"></script>
+<script src="main.js"></script>
+<script src="calendar.js"></script>
+<script src="timeupdate.js"></script>
+<script src="audioVisualizer.js"></script>
+<script src="mediaListener.js"></script>
+<script src="applyProperties.js"></script>
+</html>

@@ -1,0 +1,113 @@
+{
+	"contentrating" : "Everyone",
+	"description" : "Osage Chan~",
+	"file" : "index.html",
+	"general" : 
+	{
+		"properties" : 
+		{
+			"audiovisualizerypos" : 
+			{
+				"fraction" : true,
+				"index" : 1,
+				"max" : 100,
+				"min" : 0,
+				"order" : 101,
+				"precision" : 2,
+				"step" : 0.1,
+				"text" : "Audio Visualizer Y Pos",
+				"type" : "slider",
+				"value" : 100
+			},
+			"backgroundbrightness" : 
+			{
+				"fraction" : true,
+				"index" : 0,
+				"max" : 100,
+				"min" : 0,
+				"order" : 100,
+				"precision" : 2,
+				"step" : 0.1,
+				"text" : "Background Brightness",
+				"type" : "slider",
+				"value" : 100
+			},
+			"enabledragging" : 
+			{
+				"index" : 2,
+				"order" : 102,
+				"text" : "Enable Dragging",
+				"type" : "bool",
+				"value" : true
+			},
+			"mirroredvisualizer" : 
+			{
+				"index" : 5,
+				"order" : 105,
+				"text" : "Mirrored Visualizer",
+				"type" : "bool",
+				"value" : true
+			},
+			"musicplayatstart" : 
+			{
+				"index" : 6,
+				"order" : 106,
+				"text" : "Music Play At Start",
+				"type" : "bool",
+				"value" : true
+			},
+			"musicvolume" : 
+			{
+				"fraction" : true,
+				"index" : 4,
+				"max" : 200,
+				"min" : 0,
+				"order" : 104,
+				"precision" : 2,
+				"step" : 0.1,
+				"text" : "Music Volume",
+				"type" : "slider",
+				"value" : 30
+			},
+			"randomizesongs" : 
+			{
+				"index" : 7,
+				"order" : 107,
+				"text" : "Randomize Songs",
+				"type" : "bool",
+				"value" : true
+			},
+			"schemecolor" : 
+			{
+				"order" : 0,
+				"text" : "ui_browse_properties_scheme_color",
+				"type" : "color",
+				"value" : "0 0 0"
+			},
+			"soundsensitivity" : 
+			{
+				"fraction" : true,
+				"index" : 3,
+				"max" : 300,
+				"min" : 0,
+				"order" : 103,
+				"precision" : 2,
+				"step" : 0.1,
+				"text" : "Sound Sensitivity",
+				"type" : "slider",
+				"value" : 100
+			}
+		},
+		"supportsaudioprocessing" : true
+	},
+	"preview" : "preview.gif",
+	"ratingsex" : "none",
+	"ratingviolence" : "none",
+	"tags" : [ "Anime" ],
+	"title" : "Osage Chan~",
+	"type" : "Web",
+	"version" : 7,
+	"visibility" : "public",
+	"workshopid" : "",
+	"workshopurl" : ""
+}

@@ -1,0 +1,1226 @@
+/* ==========================================================================
+   1. FONTS & BASE STYLES
+   ========================================================================== */
+
+@font-face {
+    font-family: 'Rubik';
+    src: url('assets/fonts/Rubik/Rubik-VariableFont_wght.ttf');
+}
+
+* {
+    font-family: 'Rubik', sans-serif;
+    user-select: none;
+}
+
+body {
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: end;
+    align-items: end;
+    overflow: hidden;
+
+    --bottom-offset: 30px;
+}
+
+
+/* ==========================================================================
+   2. BACKGROUND & NAVIGATION SELECTOR
+   ========================================================================== */
+
+#backgroundScroller {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: url(osage-bg.png);
+    background-size: cover;
+    background-position-x: 50%;
+    z-index: -100;
+}
+
+#pageSelector {
+    position: absolute;
+    display: flex;
+    gap: 20px;
+    left: 50%;
+    bottom: calc(60px + var(--bottom-offset));
+    transform: translate(-50%, 0);
+    z-index: 10;
+    transition: gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#pageSelector i {
+    border-radius: 100vw;
+    background-color: #e6e6e6;
+    backdrop-filter: invert(1) blur(5px);
+    color: black;
+    display: grid;
+    place-items: center;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#pageSelector i img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+
+#pageSelector #center img {
+    width: 27px;
+    height: 27px;
+    transform: scale(1.15);
+}
+
+#pageSelector #center {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    transform: scale(0);
+}
+
+#pageSelector.at-center #center {
+    opacity: 1;
+    pointer-events: auto;
+    width: 50px;
+    transform: scale(1);
+}
+
+#pageSelector.at-start {
+    gap: 0;
+}
+
+#pageSelector.at-start #left {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    transform: scale(0);
+}
+
+#pageSelector.at-end {
+    gap: 0;
+}
+
+#pageSelector.at-end #right {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    transform: scale(0);
+}
+
+.down {
+    transition: bottom 0.5s, opacity 0.5s;
+    opacity: 0;
+    bottom: -40px !important;
+}
+
+
+/* ==========================================================================
+   3. TIME & DATE DISPLAY
+   ========================================================================== */
+
+#timeDisplay {
+    position: relative;
+    width: 350px;
+    height: 200px;
+    box-sizing: border-box;
+    background-color: #36363670;
+    backdrop-filter: invert(1) blur(5px);
+    margin: calc(60px + var(--bottom-offset));
+    border-radius: 40px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 150;
+    color: white;
+    font-size: 1.5rem;
+    bottom: 0;
+    transition: bottom 0.5s, opacity 0.5s;
+}
+
+#time {
+    font-size: 4rem;
+    padding-block: 30px;
+}
+
+#date {
+    font-size: 1.5rem;
+    display: grid;
+    place-items: center;
+    flex: 1;
+    background-color: #e6e6e6;
+    color: black;
+    width: 100%;
+}
+
+#timeDisplayBigger {
+    position: absolute;
+    width: 500px;
+    height: 250px;
+    bottom: calc(170px + var(--bottom-offset));
+    left: 50%;
+    transform: translate(-50%, 0);
+    background-color: #36363670;
+    backdrop-filter: invert(1) blur(5px);
+    border-radius: 40px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    font-size: 4rem;
+    transition: bottom 0.5s, opacity 0.5s;
+    z-index: 10;
+}
+
+#time1 {
+    font-size: 6rem;
+    padding-block: 30px;
+}
+
+#date1 {
+    font-size: 2rem;
+    display: grid;
+    place-items: center;
+    flex: 1;
+    background-color: #e6e6e6;
+    color: black;
+    width: 100%;
+}
+
+
+/* ==========================================================================
+   4. AUDIO VISUALIZER
+   ========================================================================== */
+
+#audiovisualizer {
+    position: absolute;
+    top: 50vh;
+    left: 50vw;
+    transform: translate(-50%, -50%) scale(1.1);
+    width: 100vw;
+    z-index: -99;
+    user-select: none;
+    pointer-events: none;
+}
+
+
+/* ==========================================================================
+   5. CALENDAR WIDGET
+   ========================================================================== */
+
+#calendar-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #363636e6;
+    backdrop-filter: invert(1) blur(5px);
+    width: 550px;
+    border-radius: 40px;
+    overflow: hidden;
+    z-index: 100;
+}
+
+#calendar-header {
+    background-color: #e6e6e6;
+    height: 100px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+}
+
+#monthDisplay {
+    font-size: 2rem;
+    letter-spacing: 5px;
+}
+
+.weekdays-header {
+    background-color: #797979;
+    color: white;
+    display: flex;
+    align-items: center;
+    height: 40px;
+    font-size: 1.25rem;
+}
+
+.weekdays-header div {
+    width: calc(100% / 7);
+    text-align: center;
+}
+
+#days-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    color: whitesmoke;
+    font-size: 1.25rem;
+}
+
+#days-wrapper div {
+    --width: calc(100% / 7);
+    width: var(--width);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+}
+
+.current-day {
+    background-color: white;
+    color: black;
+    border-radius: 30%;
+    --margin: 5px;
+    margin: var(--margin);
+    width: calc(var(--width) - (var(--margin) * 2)) !important;
+}
+
+.beforeDays,
+.afterDays {
+    color: #a3a3a3;
+}
+
+
+/* ==========================================================================
+   6. MEDIA PLAYER CONTAINER & COVER IMAGE
+   ========================================================================== */
+
+#media-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#media-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    border-radius: 40px;
+    overflow: hidden;
+    background-color: #36363670;
+    backdrop-filter: invert(1) blur(5px);
+    z-index: 100;
+    flex-shrink: 0;
+}
+
+#media-image {
+    background-image: url(inaba_512.png);
+    background-position: center;
+    background-size: cover;
+    image-rendering: -webkit-optimize-contrast;
+    width: 300px;
+    height: 300px;
+    margin-block: 10px;
+    margin-left: 10px;
+    border-radius: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+#switch-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.616);
+    border-radius: 100vw;
+    padding: 10px;
+    transition: transform 0.5s ease, opacity 0.5s ease, box-shadow 0.2s;
+    display: grid;
+    transform: scale(0.8);
+}
+
+#switch-menu:hover {
+    transform: scale(1);
+    box-shadow: 0 0 50px black;
+}
+
+#settings-menu {
+    position: absolute;
+    top: 60px;
+    right: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.616);
+    border-radius: 100vw;
+    padding: 10px;
+    transition: transform 0.5s ease, box-shadow 0.2s;
+    display: grid;
+    transform: scale(0.8);
+}
+
+#settings-menu:hover {
+    transform: scale(1);
+    box-shadow: 0 0 50px black;
+}
+
+
+/* ==========================================================================
+   7. MEDIA PLAYER PROPERTIES & TRACK METADATA
+   ========================================================================== */
+
+#media-properties {
+    overflow: hidden;
+    width: 500px;
+    height: 300px;
+    margin-block: 10px;
+    margin-right: 10px;
+    border-radius: 0 30px 30px 0;
+    color: white;
+    font-size: 2.5rem;
+    box-sizing: border-box;
+    text-wrap: nowrap;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 20px;
+    transition: 1s;
+}
+
+.hide-properties {
+    width: 0 !important;
+    opacity: 0;
+}
+
+#media-properties > div {
+    margin-inline: 15px;
+    text-wrap: nowrap;
+}
+
+#media-title-wrapper {
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    height: 56px;
+    line-height: 56px;
+    display: flex;
+    align-items: center;
+}
+
+#media-title-wrapper::before,
+#media-title-wrapper::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 40px;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+#media-title-track {
+    display: inline-flex;
+    width: max-content;
+    align-items: center;
+}
+
+#media-title-track span {
+    display: inline-block;
+    line-height: 56px;
+    padding-right: 60px;
+}
+
+#media-title {
+    text-wrap: nowrap;
+}
+
+#media-album-wrapper {
+    font-size: 1.5rem;
+    color: #c9c9c9;
+    overflow: hidden;
+    white-space: nowrap;
+    height: 32px;
+    line-height: 32px;
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
+    margin-bottom: 2px;
+}
+
+#media-album-track {
+    display: inline-flex;
+    width: max-content;
+}
+
+#media-album {
+    font-size: 1.5rem;
+    color: #c9c9c9;
+    text-wrap: nowrap;
+    white-space: nowrap;
+    position: relative;
+    margin: auto;
+}
+
+#media-meta {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    margin-top: 0;
+    transform: translateY(-4px);
+}
+
+#media-artist-wrapper {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 1.5rem;
+    color: #c9c9c9;
+    height: 32px;
+    line-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+#media-artist-track {
+    display: inline-flex;
+    width: max-content;
+}
+
+#media-release {
+    flex: 1;
+    text-align: right;
+    font-size: 1.5rem;
+    color: #c9c9c9;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    line-height: 32px;
+    margin-right: 38px;
+}
+
+#media-release::before {
+    content: "|";
+    margin-right: 8px;
+    opacity: 1;
+}
+
+#media-title-track span,
+#media-album-track span,
+#media-artist-track span {
+    padding-right: 20px;
+    flex-shrink: 0;
+}
+
+#media-title-track,
+#media-album-track,
+#media-artist-track {
+    will-change: transform;
+}
+
+
+/* ==========================================================================
+   8. MEDIA PLAYER CONTROLS & SLIDER
+   ========================================================================== */
+
+.slider-wrapper {
+    margin-top: 60px;
+    font-size: 1rem;
+    transition: transform 0.5s ease, margin-top 0.5s ease;
+}
+
+.media-time {
+    display: flex;
+    justify-content: space-between;
+}
+
+#media-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s, 0.1s;
+    user-select: none;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+#media-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    background-color: white;
+    width: 15px;
+    height: 15px;
+    border-radius: 100vw;
+    user-select: none;
+    pointer-events: auto;
+    transition: 0.1s;
+    cursor: pointer;
+}
+
+#media-buttons {
+    margin-top: 5px;
+    padding-inline: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+#media-buttons i {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+#media-buttons i img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+#media-buttons i:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+#media-play,
+#media-pause {
+    transform: scale(1.3);
+    background: center;
+}
+
+.hide-pause-play {
+    display: none !important;
+}
+
+#media-info {
+    background: url("assets/icons/icons8-other-32.png") center no-repeat;
+    transform: scale(1.3);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+#media-info.active {
+    background: url("assets/icons/icons8-other-32-1.png") center no-repeat;
+}
+
+#media-repeat {
+    background: url("assets/icons/icons8-shuffle-32.png") center no-repeat;
+    transform: scale(1.3);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+#media-repeat:active {
+    transform: scale(1.3);
+}
+
+#media-repeat.sequential-mode {
+    background: url("assets/icons/icons8-repeat-32.png") center no-repeat;
+}
+
+#media-repeat.repeat-mode {
+    background: url("assets/icons/icons8-repeat-one-32.png") center no-repeat;
+}
+
+
+/* ==========================================================================
+   APPS CONNECT ACTIVE TRANSITIONS
+   ========================================================================== */
+
+#media-wrapper.apps-active #switch-menu,
+#media-wrapper.spotify-active #switch-menu {
+    transform: translateY(-80px) scale(0.8);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#media-wrapper.apps-active #settings-menu,
+#media-wrapper.spotify-active #settings-menu {
+    transform: translateY(-50px) scale(0.8);
+}
+
+#media-wrapper.apps-active #media-buttons,
+#media-wrapper.spotify-active #media-buttons {
+    transform: translateY(80px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#media-wrapper.apps-active .slider-wrapper,
+#media-wrapper.spotify-active .slider-wrapper {
+    transform: translateY(20px);
+    margin-top: 10px !important;
+}
+
+
+/* ==========================================================================
+   APPS CONNECT SYNCED LYRICS
+   ========================================================================== */
+
+#media-lyrics-container {
+    height: 0;
+    margin-inline: 15px;
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: height 0.5s ease, margin-top 0.5s ease, opacity 0.5s ease;
+}
+
+#media-wrapper.apps-active #media-lyrics-container,
+#media-wrapper.spotify-active #media-lyrics-container {
+    height: 72px;
+    margin-top: 24px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#media-lyrics-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+#media-lyrics-wrapper.slide-up {
+    transform: translateY(-34px);
+}
+
+#media-lyric-current {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+    height: 34px;
+    line-height: 34px;
+    letter-spacing: 0.3px;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+#media-lyric-next {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+    height: 30px;
+    line-height: 30px;
+    transform-origin: center center;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), color 0.35s ease;
+}
+
+#media-lyrics-wrapper.slide-up #media-lyric-current {
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+#media-lyrics-wrapper.slide-up #media-lyric-next {
+    opacity: 1;
+    color: #ffffff;
+    transform: scale(1.3529);
+}
+
+
+/* ==========================================================================
+   9. MEDIA PLAYLIST PANEL & ITEMS
+   ========================================================================== */
+
+#media-playlist {
+    white-space: nowrap;
+    overflow: hidden;
+    width: 500px;
+    height: 300px;
+    margin-block: 10px;
+    margin-right: 10px;
+    border-radius: 0 30px 30px 0;
+    color: white;
+    font-size: 1rem;
+    box-sizing: border-box;
+    text-wrap: nowrap;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: 1.5s;
+}
+
+.media-header {
+    background-color: #e6e6e6;
+    color: black;
+    border-radius: 30px;
+    height: 50px;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    margin-inline: 10px;
+    margin-bottom: 7px;
+}
+
+.media-header i {
+    width: 50px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+}
+
+#media-left,
+#media-right {
+    transition: opacity 0.3s ease;
+}
+
+#media-playlist-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    padding-inline: 10px;
+    gap: 7px;
+    overflow: hidden;
+}
+
+#media-playlist-list > div {
+    background-color: #797979;
+    border-radius: 30px;
+    padding-inline: 20px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.playlist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.playlist-number {
+    flex-shrink: 0;
+    width: 35px;
+    text-align: right;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+}
+
+.playlist-title-wrapper {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+    flex: 1;
+}
+
+.playlist-title-track {
+    display: inline-flex;
+    width: max-content;
+}
+
+.playlist-title-track span {
+    padding-right: 1px;
+}
+
+
+/* ==========================================================================
+   10. SETTINGS PANEL
+   ========================================================================== */
+
+#settings-panel {
+    width: 0;
+    height: 300px;
+    opacity: 0;
+    overflow: hidden;
+    background: rgba(25, 25, 25, 0.65);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 30px;
+    margin-block: 10px;
+    margin-right: 20px;
+    margin-left: -20px;
+    position: relative;
+    z-index: 99;
+    transform: translateX(30px) scale(0.95);
+    filter: blur(6px);
+    pointer-events: none;
+    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1.4s ease,
+    transform 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1.5s ease;
+}
+
+#media-container.settings-open #settings-panel {
+    width: 300px;
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+    pointer-events: auto;
+}
+
+#settings-panel .info-content {
+    padding: 22px 18px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-title {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.settings-title::before,
+.settings-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2));
+}
+
+.settings-title::after {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent);
+}
+
+#settings-panel .info-section {
+    margin-top: 0;
+    padding-top: 0;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#settings-panel .info-section::before {
+    display: none;
+}
+
+.settings-row {
+    padding: 10px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.25s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+    height: 44px;
+    box-sizing: border-box;
+}
+
+.settings-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 25%;
+    height: 50%;
+    width: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0 4px 4px 0;
+    transition: background 0.25s ease, height 0.25s ease;
+}
+
+.settings-row:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.01);
+}
+
+.settings-row:hover::before {
+    background: #ffffff;
+    height: 70%;
+}
+
+.settings-row span:first-child {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    transition: all 0.25s ease;
+}
+
+.settings-toggle {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-toggle.active {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+}
+
+.settings-row.disabled {
+    cursor: not-allowed !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: rgba(255, 255, 255, 0.03) !important;
+    transform: none !important;
+}
+
+.settings-row.disabled::before {
+    background: rgba(255, 255, 255, 0.1) !important;
+    height: 30% !important;
+}
+
+.settings-row.disabled span:first-child {
+    color: rgba(255, 255, 255, 0.35) !important;
+    text-decoration: line-through;
+}
+
+.settings-row.disabled .settings-toggle {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: none !important;
+}
+
+
+/* ==========================================================================
+   11. MEDIA INFO PANEL
+   ========================================================================== */
+
+#media-info-panel {
+    width: 0;
+    height: 300px;
+    opacity: 0;
+    overflow: hidden;
+    background: rgba(25, 25, 25, 0.65);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 30px;
+    margin-block: 10px;
+    margin-right: 10px;
+    margin-left: -20px;
+    position: relative;
+    z-index: 99;
+    transform: translateX(30px) scale(0.95);
+    filter: blur(6px);
+    pointer-events: none;
+    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1.4s ease,
+    transform 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1.5s ease;
+}
+
+#media-container.info-open #media-info-panel {
+    width: 300px;
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+    pointer-events: auto;
+}
+
+.info-content {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 14px;
+    gap: 10px;
+    box-sizing: border-box;
+}
+
+.info-header {
+    flex-shrink: 0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 12px;
+    border-radius: 16px;
+}
+
+#info-cover {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background-size: cover;
+    background-position: center;
+    image-rendering: -webkit-optimize-contrast;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.info-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+#info-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#info-artist {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    position: relative;
+    transform: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.info-section::before {
+    display: none;
+}
+
+.info-switch {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 3px 6px;
+}
+
+#info-prev,
+#info-next {
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+#info-prev:hover,
+#info-next:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+#info-category {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+#info-content-display {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 0;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+#info-content-display::-webkit-scrollbar {
+    display: none;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 8px 10px;
+    border-radius: 12px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.info-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.info-row span:first-child {
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.info-row span:last-child {
+    color: #ffffff;
+    font-weight: 500;
+    max-width: 65%;
+    text-align: right;
+    word-break: break-word;
+    line-height: 1.35;
+}
