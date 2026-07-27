@@ -13,6 +13,7 @@ let calendar = document.getElementById('calendar-wrapper');
 let media = document.getElementById('media-wrapper');
 let left = document.getElementById('left');
 let center = document.getElementById('center');
+let centerIcon = document.getElementById('centerIcon');
 let right = document.getElementById('right');
 let pageSelector = document.getElementById('pageSelector');
 
@@ -37,6 +38,10 @@ let mouse = {
 let scrollPositions = [0, 0.5, 1];
 let scrollIndex = 1;
 
+let isRefreshingConnection = false;
+const ONLINE_ICON = 'assets/icons/icons8-video-32.png';
+const OFFLINE_ICON = 'assets/icons/icons8-no-wifi-32.png';
+
 
 /* ==========================================================================
    3. EVENT LISTENERS (CLICK & DRAG)
@@ -51,6 +56,9 @@ left.addEventListener("click", () => {
 
 if (center) {
     center.addEventListener("click", () => {
+        if (!isRefreshingConnection) {
+            triggerConnectionRefresh();
+        }
         scrollIndex = 1;
         scrollPercent = scrollPositions[scrollIndex];
         lastPercent = scrollPercent;
@@ -99,7 +107,49 @@ document.addEventListener("mousemove", (event) => {
 
 
 /* ==========================================================================
-   4. ANIMATION LOOP & SEQUENTIAL NAVIGATION STATES
+   4. INTERNET CONNECTION & CENTER BUTTON REFRESH SYSTEM
+   ========================================================================== */
+
+function checkInternetStatus() {
+    return navigator.onLine;
+}
+
+function updateCenterIcon() {
+    if (centerIcon) {
+        if (checkInternetStatus()) {
+            centerIcon.src = ONLINE_ICON;
+        } else {
+            centerIcon.src = OFFLINE_ICON;
+        }
+    }
+}
+
+function triggerConnectionRefresh() {
+    if (isRefreshingConnection || !center) return;
+    isRefreshingConnection = true;
+
+    center.classList.add("refresh-hide");
+
+    setTimeout(() => {
+        updateCenterIcon();
+        center.classList.remove("refresh-hide");
+        isRefreshingConnection = false;
+    }, 3000);
+}
+
+window.addEventListener("online", () => {
+    triggerConnectionRefresh();
+});
+
+window.addEventListener("offline", () => {
+    triggerConnectionRefresh();
+});
+
+updateCenterIcon();
+
+
+/* ==========================================================================
+   5. ANIMATION LOOP & SEQUENTIAL NAVIGATION STATES
    ========================================================================== */
 
 update();
@@ -152,4 +202,50 @@ function update() {
 
 function lerp(current, target, smoothness) {
     return current + (target - current) * smoothness;
+}
+
+
+/* ==========================================================================
+   6. MUSIC PLAYER AUTO-RESET SYSTEM
+   ========================================================================== */
+
+function resetMusicPanels() {
+    let mediaContainer = document.getElementById('media-container');
+    let mediaProperties = document.getElementById('media-properties');
+    let mediaPlaylist = document.getElementById('media-playlist');
+    let mediaInfoBtn = document.getElementById('media-info');
+
+    if (mediaContainer) {
+        mediaContainer.classList.remove('settings-open');
+        mediaContainer.classList.remove('info-open');
+    }
+
+    if (mediaInfoBtn) {
+        mediaInfoBtn.classList.remove('active');
+    }
+
+    if (mediaProperties && mediaPlaylist) {
+        mediaProperties.classList.remove('hide-properties');
+        mediaPlaylist.classList.add('hide-properties');
+    }
+}
+
+if (pageSelector) {
+    const musicObserver = new MutationObserver(() => {
+        if (!pageSelector.classList.contains('at-start')) {
+            resetMusicPanels();
+        }
+    });
+
+    musicObserver.observe(pageSelector, { attributes: true, attributeFilter: ['class'] });
+
+    pageSelector.querySelectorAll('i').forEach(navBtn => {
+        navBtn.addEventListener('click', () => {
+            setTimeout(() => {
+                if (!pageSelector.classList.contains('at-start')) {
+                    resetMusicPanels();
+                }
+            }, 50);
+        });
+    });
 }

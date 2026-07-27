@@ -890,8 +890,10 @@ function songOnClickListener(event) {
 
 function songOnEndListener() {
     if (playMode === 2) {
+        let startPercent = parseFloat(slider.value) || 100;
         currentSong.audio.currentTime = 0;
         currentSong.audio.play();
+        animateSliderToAudio(startPercent, 1500);
         return;
     }
 

@@ -1,54 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- ==========================================================================
+       1. HEAD & METADATA
+       ========================================================================== -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik&display=swap" rel="stylesheet"> -->
+    <title>Osage Chan Wallpaper</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="backgroundScroller">
-</div>
+
+<!-- ==========================================================================
+   2. BACKGROUND & VISUALIZER
+   ========================================================================== -->
+<div id="backgroundScroller"></div>
 <canvas id="audiovisualizer"></canvas>
+
+<!-- ==========================================================================
+   3. TIME & DATE DISPLAYS
+   ========================================================================== -->
 <div id="timeDisplay">
-    <div id="time">12:100PM</div>
-    <div id="date">
-        hanglasa
-    </div>
+    <div id="time">12:00PM</div>
+    <div id="date">--</div>
 </div>
+
 <div id="timeDisplayBigger">
-    <div id="time1">12:100PM</div>
-    <div id="date1">
-        hanglasa
-    </div>
+    <div id="time1">12:00PM</div>
+    <div id="date1">--</div>
 </div>
+
+<!-- ==========================================================================
+   4. PAGE SELECTOR NAVIGATION
+   ========================================================================== -->
 <div id="pageSelector">
     <i id="left"><img src="assets/icons/icons8-back-16.png"></i>
-    <i id="center"><img src="assets/icons/icons8-video-32.png"></i>
+    <i id="center"><img id="centerIcon" src="assets/icons/icons8-video-32.png"></i>
     <i id="right"><img src="assets/icons/icons8-forward-16.png"></i>
 </div>
 
+<!-- ==========================================================================
+   5. CALENDAR WIDGET & LEFT PANEL
+   ========================================================================== -->
 <div id="calendar-wrapper">
-    <div id="calendar-header">
-        <div id="monthDisplay">JANUARY</div>
-        <div id="wholeDate">January 27, 2024</div>
+    <div id="calendar-panel-left" class="hide-panel">
+        <div id="cal-close-btn">&gt;</div>
+        <div class="cal-panel-content">
+            <div id="cal-panel-top" class="hide-top-info">
+                <div id="panel-time">12:00PM</div>
+                <div id="cal-selected-day-name">MONDAY</div>
+                <div id="cal-selected-date-display">JULY 27, 2026</div>
+            </div>
+
+            <div class="cal-panel-divider"></div>
+
+            <div id="cal-panel-bottom">
+                <div class="events-header-title">SPECIAL OBSERVANCES</div>
+                <div id="cal-events-list">
+                    <div class="event-item">No Special Observances</div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="weekdays-header">
-        <div>Sun</div>
-        <div>Mon</div>
-        <div>Tue</div>
-        <div>Wed</div>
-        <div>Thu</div>
-        <div>Fri</div>
-        <div>Sat</div>
-    </div>
-    <div id="days-wrapper">
+
+    <div id="calendar-main-card">
+        <div id="calendar-header">
+            <i id="cal-prev"><img src="assets/icons/icons8-back-16.png"></i>
+
+            <div class="calendar-title-container">
+                <span id="yearDisplay">2026</span>
+                <span id="monthDisplay">JULY</span>
+            </div>
+
+            <i id="cal-next"><img src="assets/icons/icons8-forward-16.png"></i>
+        </div>
+
+        <div id="calendar-body">
+            <div class="weekdays-header" id="weekdays-header">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+
+            <div id="days-wrapper"></div>
+
+            <div id="years-wrapper" class="hide-years">
+                <div class="year-selection-overlay"></div>
+                <div id="years-list"></div>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- ==========================================================================
+   6. MEDIA PLAYER & PANELS
+   ========================================================================== -->
 <div id="media-container">
     <div id="media-wrapper">
         <div id="media-image">
@@ -75,11 +125,9 @@
                         <span id="media-artist"></span>
                     </div>
                 </div>
-
                 <div id="media-release"></div>
             </div>
 
-            <!-- SPOTIFY SYNCED LYRICS CONTAINER WITH SLIDE WRAPPER -->
             <div id="media-lyrics-container">
                 <div id="media-lyrics-wrapper">
                     <div id="media-lyric-current"></div>
@@ -104,6 +152,7 @@
                 <i id="media-repeat"></i>
             </div>
         </div>
+
         <div id="media-playlist" class="hide-properties">
             <div class="media-header">
                 <i><img src="assets/icons/icons8-back-16.png" id="media-left"></i>
@@ -112,22 +161,18 @@
             </div>
             <div id="media-playlist-list"></div>
         </div>
+
         <div id="settings-panel">
             <div class="info-content">
-
                 <div id="settings-title" class="settings-title">Settings</div>
-
                 <div class="info-section">
-
                     <div id="settings-content"></div>
-
                 </div>
-
             </div>
         </div>
+
         <div id="media-info-panel">
             <div class="info-content">
-
                 <div class="info-header">
                     <div id="info-cover"></div>
                     <div class="info-main">
@@ -137,21 +182,21 @@
                 </div>
 
                 <div class="info-section" id="info-section">
-
                     <div class="info-switch">
                         <span id="info-prev">‹</span>
                         <div id="info-category">Description</div>
                         <span id="info-next">›</span>
                     </div>
-
                     <div id="info-content-display"></div>
-
                 </div>
             </div>
         </div>
     </div>
 </div>
-</body>
+
+<!-- ==========================================================================
+   7. SCRIPTS
+   ========================================================================== -->
 <script src="https://kit.fontawesome.com/b9c1de485e.js" crossorigin="anonymous"></script>
 <script src="jsmediatags.min.js"></script>
 <script src="main.js"></script>
@@ -160,4 +205,5 @@
 <script src="audioVisualizer.js"></script>
 <script src="mediaListener.js"></script>
 <script src="applyProperties.js"></script>
+</body>
 </html>

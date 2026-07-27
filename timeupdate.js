@@ -45,11 +45,11 @@ function updateTime() {
     month = months[monthNumber - 1];
     dateDisplay.innerHTML = weekday[date.getDay()] + ", " + month + " " + day + ", " + year;
     dateDisplay1.innerHTML = weekday[date.getDay()] + ", " + month + " " + day + ", " + year;
-    document.getElementById('wholeDate').innerHTML = weekday[date.getDay()] + ", " + month + " " + day + ", " + year;
-    document.getElementById('monthDisplay').innerHTML = month.toUpperCase();
 
     if (!updateTime.updatedDate) {
-        updateCalendar(day, monthNumber - 1, year, date.getDay());
+        if (typeof updateCalendar === 'function') {
+            updateCalendar(day, monthNumber - 1, year, date.getDay());
+        }
         updateTime.updatedDate = true;
     }
 }
@@ -68,7 +68,9 @@ function checkDayChange() {
         let monthNumber = currentDate.getMonth() + 1;
         let year = currentDate.getFullYear();
 
-        updateCalendar(day, monthNumber - 1, year, currentDate.getDay());
+        if (typeof updateCalendar === 'function') {
+            updateCalendar(day, monthNumber - 1, year, currentDate.getDay());
+        }
         checkDayChange.previousDay = currentDay;
     }
 }
