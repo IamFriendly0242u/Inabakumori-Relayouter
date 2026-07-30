@@ -56,12 +56,20 @@ left.addEventListener("click", () => {
 
 if (center) {
     center.addEventListener("click", () => {
-        if (!isRefreshingConnection) {
-            triggerConnectionRefresh();
+        // Check if user has an active internet connection
+        if (checkInternetStatus()) {
+            // Navigate to video player page when online
+            window.location.href = 'video/video-player.html';
+        } else {
+            // Block navigation when offline and trigger connection status refresh
+            if (!isRefreshingConnection) {
+                triggerConnectionRefresh();
+            }
+            scrollIndex = 1;
+            scrollPercent = scrollPositions[scrollIndex];
+            lastPercent = scrollPercent;
+            console.warn("Navigation blocked: Internet connection is offline.");
         }
-        scrollIndex = 1;
-        scrollPercent = scrollPositions[scrollIndex];
-        lastPercent = scrollPercent;
     });
 }
 
@@ -157,6 +165,8 @@ update();
 function update() {
     if (Math.abs(currentPercent - scrollPercent) > 0.0005) {
         currentPercent = lerp(currentPercent, scrollPercent, 0.05);
+    } else {
+        currentPercent = scrollPercent;
     }
 
     if (scrollPercent <= 0.55 && scrollPercent >= 0.45) {

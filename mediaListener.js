@@ -25,6 +25,10 @@ let repeatButton = document.getElementById('media-repeat');
 let infoButton = document.getElementById('media-info');
 let mediaContainer = document.getElementById('media-container');
 let mediaWrapper = document.getElementById('media-wrapper');
+let mediaButtons = document.getElementById('media-buttons');
+let timerMenu = document.getElementById('timer-menu');
+let timerText = document.getElementById('timer-text');
+let timerTooltip = document.getElementById('timer-tooltip');
 
 const categoryTitle = document.getElementById("info-category");
 const contentDisplay = document.getElementById("info-content-display");
@@ -52,6 +56,108 @@ let isMouseDownOnSlider = false;
 let sliderMouseDownX = 0;
 let sliderMouseDownValue = 0;
 let isDraggingSlider = false;
+
+let isFirstLoadPending = true;
+let countdownValue = 60;
+let countdownInterval = null;
+let isKeepPaused = false;
+let is3sLockPhase = false;
+
+function startFirstLoadCountdown() {
+    if (!isFirstLoadPending) return;
+
+    if (timerText) timerText.textContent = countdownValue;
+    if (timerMenu) timerMenu.classList.remove('hide-timer');
+
+    clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+        countdownValue--;
+
+        if (timerText) timerText.textContent = countdownValue;
+
+        if (countdownValue <= 0) {
+            finishFirstLoadCountdown();
+        }
+    }, 1000);
+}
+
+function finishFirstLoadCountdown() {
+    if (!isFirstLoadPending) return;
+    isFirstLoadPending = false;
+    is3sLockPhase = false;
+
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+
+    if (timerTooltip) {
+        timerTooltip.classList.add('hide-tooltip');
+    }
+
+    if (timerMenu) {
+        timerMenu.classList.add('hide-timer');
+    }
+
+    if (mediaButtons) {
+        mediaButtons.classList.remove('controls-locked');
+    }
+    if (switchMenu) {
+        switchMenu.classList.remove('controls-locked');
+    }
+
+    if (!isKeepPaused) {
+        if (currentSong && !isPlayingOtherMedia && !isAppsConnectPlaying()) {
+            startSong(currentSong);
+        }
+    }
+}
+
+if (timerMenu) {
+    timerMenu.addEventListener('mouseenter', () => {
+        if (isFirstLoadPending && !is3sLockPhase && timerTooltip) {
+            timerTooltip.classList.remove('hide-tooltip');
+        }
+    });
+
+    timerMenu.addEventListener('mouseleave', () => {
+        if (timerTooltip) {
+            timerTooltip.classList.add('hide-tooltip');
+        }
+    });
+
+    timerMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isFirstLoadPending && !is3sLockPhase) {
+            isKeepPaused = true;
+            is3sLockPhase = true;
+
+            if (timerTooltip) {
+                timerTooltip.classList.add('hide-tooltip');
+            }
+
+            if (mediaButtons) {
+                mediaButtons.classList.add('controls-locked');
+            }
+            if (switchMenu) {
+                switchMenu.classList.add('controls-locked');
+            }
+
+            let delayBefore3s = 0;
+            if (isPlaylistOpen()) {
+                toggleMenu();
+                delayBefore3s = 1000;
+            }
+
+            setTimeout(() => {
+                countdownValue = 3;
+                if (timerText) {
+                    timerText.textContent = countdownValue;
+                }
+            }, delayBefore3s);
+        }
+    });
+}
 
 const songGifs = {
     '03. 『Pascal Beats』Vo. 歌愛ユキ.mp3': 'assets/gifs/03.gif',
@@ -178,7 +284,7 @@ if (window.wallpaperRegisterMediaPropertiesListener) {
 
         if (isAppsConnectPlaying()) {
             updateSystemMediaPlayer();
-        } else if (isAppsConnectEnabled) {
+        } else {
             updateAppsUIState();
         }
     });
@@ -292,8 +398,7 @@ function fetchSyncedLyrics(title, artist) {
                 updateLyricUI("♪ No synced lyrics available", "");
             }
         })
-        .catch(err => {
-            console.log("Lyrics error:", err);
+        .catch(() => {
             updateLyricUI("♪ Lyrics unavailable", "");
         });
 }
@@ -369,6 +474,8 @@ function startAppsTimer() {
                     }
                 }
             }
+        } else {
+            stopAppsTimer();
         }
     }, 150);
 }
@@ -717,7 +824,7 @@ document.addEventListener("mouseup", (e) => {
 });
 
 switchMenu.addEventListener("click", () => {
-    if (isAppsConnectPlaying()) return;
+    if (isAppsConnectPlaying() || is3sLockPhase) return;
 
     let needsDelay = false;
 
@@ -786,22 +893,27 @@ forwardPage.addEventListener("click", () => {
 });
 
 playButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying()) return;
-    startSong(currentSong);
+    if (isAppsConnectPlaying() || is3sLockPhase) return;
+
+    if (isFirstLoadPending) {
+        finishFirstLoadCountdown();
+    } else {
+        startSong(currentSong);
+    }
 });
 
 pauseButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying()) return;
+    if (isAppsConnectPlaying() || is3sLockPhase) return;
     stopSong();
 });
 
 nextButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying()) return;
+    if (isAppsConnectPlaying() || is3sLockPhase) return;
     loadNextSong();
 });
 
 previousButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying()) return;
+    if (isAppsConnectPlaying() || is3sLockPhase) return;
     loadPreviousSong();
 });
 
@@ -827,30 +939,32 @@ document.getElementById("info-next").onclick = () => {
 function pageLoad() {
     mediaPlaylistList.innerHTML = '';
     songPaths.forEach(createSongDiv);
+    clearSlider();
+
     let randomSong = songPaths[Math.floor(Math.random() * songPaths.length)];
     loadAudio("assets/musics/" + randomSong)
         .then(songProperties => {
             currentSong = { ...songProperties };
             currentSong.audio.addEventListener("loadedmetadata", () => {
-                if (playAtStart) {
-                    startSong(currentSong);
-                } else {
-                    stopSong();
+                stopSong();
+
+                if (isFirstLoadPending) {
+                    startFirstLoadCountdown();
                 }
+
+                const songPath = songPaths[currentSongIndex];
+                const image = getSongCoverImage(songPath, currentSong.tags);
+                updatePlayer(
+                    (currentSong.tags && currentSong.tags.title) || songPath.slice(0, -4),
+                    (currentSong.tags && currentSong.tags.album) || "Inabakumori Songs",
+                    (currentSong.tags && currentSong.tags.artist) || "Inabakumori",
+                    (currentSong.tags && currentSong.tags.year) || "",
+                    image,
+                    convertSecondsToMinute(currentSong.audio.duration)
+                );
             });
             currentSong.audio.addEventListener("ended", songOnEndListener);
             currentSong.audio.load();
-
-            const songPath = songPaths[currentSongIndex];
-            const image = getSongCoverImage(songPath, currentSong.tags);
-            updatePlayer(
-                (currentSong.tags && currentSong.tags.title) || songPath.slice(0, -4),
-                (currentSong.tags && currentSong.tags.album) || "Inabakumori Songs",
-                (currentSong.tags && currentSong.tags.artist) || "Inabakumori",
-                (currentSong.tags && currentSong.tags.year) || "",
-                image,
-                convertSecondsToMinute(currentSong.audio.duration)
-            );
         })
         .catch(error => {
             console.error(error);
@@ -858,7 +972,7 @@ function pageLoad() {
     currentSongIndex = songPaths.indexOf(randomSong);
     pageLoad.isLoaded = true;
     updateArrowVisibility();
-    updateSliderFill(0);
+    clearSlider();
     isFirstLoad = false;
 }
 
@@ -878,7 +992,7 @@ function updatePlayPauseUI(isPlaying) {
 }
 
 function songOnClickListener(event) {
-    if (isAppsConnectPlaying()) return;
+    if (isAppsConnectPlaying() || is3sLockPhase) return;
 
     const songElement = event.currentTarget;
     let songPath = songElement.getAttribute("data-song-path");
@@ -940,7 +1054,11 @@ function initSong(songProperties) {
     currentSong = { ...songProperties };
 
     currentSong.audio.addEventListener("loadedmetadata", () => {
-        startSong(currentSong);
+        if (!isPlayingOtherMedia && !isAppsConnectPlaying()) {
+            startSong(currentSong);
+        } else {
+            stopSong();
+        }
     });
 
     currentSong.audio.addEventListener("ended", songOnEndListener);
@@ -948,6 +1066,26 @@ function initSong(songProperties) {
 }
 
 function startSong(song) {
+    if (isFirstLoadPending) {
+        isFirstLoadPending = false;
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        if (timerTooltip) {
+            timerTooltip.classList.add('hide-tooltip');
+        }
+        if (timerMenu) {
+            timerMenu.classList.add('hide-timer');
+        }
+        if (mediaButtons) {
+            mediaButtons.classList.remove('controls-locked');
+        }
+        if (switchMenu) {
+            switchMenu.classList.remove('controls-locked');
+        }
+    }
+
     clearInterval(songInterval);
     songInterval = setInterval(moveSongSlider, 500);
 
@@ -957,8 +1095,7 @@ function startSong(song) {
 
     song.audio.play().then(() => {
         updatePlayPauseUI(true);
-    }).catch(err => {
-        console.log("Play error:", err);
+    }).catch(() => {
         updatePlayPauseUI(false);
     });
 
@@ -994,10 +1131,22 @@ function stopSong() {
     isSeekingAnimation = false;
     clearInterval(songInterval);
     updatePlayPauseUI(false);
+
+    if (!isAppsConnectPlaying()) {
+        let curTime = (currentSong && currentSong.audio) ? currentSong.audio.currentTime : 0;
+        let durTime = (currentSong && currentSong.audio && !isNaN(currentSong.audio.duration)) ? currentSong.audio.duration : 0;
+
+        elapsedTime.innerHTML = convertSecondsToMinute(curTime);
+        let progress = durTime > 0 ? (curTime / durTime) * 100 : 0;
+        slider.value = progress;
+        updateSliderFill(progress);
+    }
 }
 
 function clearSlider() {
     clearInterval(songInterval);
+    if (sliderUiFrame) cancelAnimationFrame(sliderUiFrame);
+    isSeekingAnimation = false;
     elapsedTime.innerHTML = "0:00";
     slider.value = 0;
     updateSliderFill(0);
@@ -1098,8 +1247,9 @@ function wallpaperMediaPlaybackListener(event) {
     systemMediaData.isPlaying = isPlayingOtherMedia;
 
     if (isPlayingOtherMedia) {
+        stopSong();
+
         if (isAppsConnectPlaying()) {
-            stopSong();
             let startPercent = parseFloat(slider.value) || 0;
             lastTrackKey = "";
             updatePlayPauseUI(true);
@@ -1110,6 +1260,7 @@ function wallpaperMediaPlaybackListener(event) {
             stopAppsTimer();
             updateAppsUIState();
             syncStaticPlayPauseUI();
+            clearSlider();
         }
     } else {
         stopAppsTimer();
@@ -1485,6 +1636,8 @@ function handleConnectStateChange() {
 
         if (currentSong && currentSong.audio && !isNaN(currentSong.audio.duration)) {
             animateSliderToAudio(startPercent, 1500);
+        } else {
+            clearSlider();
         }
     }
 }
@@ -1508,14 +1661,12 @@ function loadAudio(audioFileName) {
                     onSuccess: (tags) => {
                         resolve({ tags: tags.tags || {}, audio: songAudio });
                     },
-                    onError: (error) => {
-                        console.log("jsmediatags error:", error);
+                    onError: () => {
                         resolve({ tags: {}, audio: songAudio });
                     }
                 });
             })
             .catch(error => {
-                console.error("Audio load error:", error);
                 reject(error);
             });
     });
@@ -1536,6 +1687,10 @@ function getPictureFromTags(tags) {
 }
 
 function convertSecondsToMinute(totalSeconds) {
+    if (isNaN(totalSeconds) || totalSeconds === null || totalSeconds === undefined) {
+        return "00:00";
+    }
+
     let secondsRound = Math.round(totalSeconds);
     let minutes = Math.floor(secondsRound / 60);
     let seconds = secondsRound % 60;
@@ -1543,8 +1698,7 @@ function convertSecondsToMinute(totalSeconds) {
     let minuteString = (minutes < 10 ? '0' : '') + minutes;
     let secondString = (seconds < 10 ? '0' : '') + seconds;
 
-    let resultString = minuteString + ':' + secondString;
-    return resultString;
+    return minuteString + ':' + secondString;
 }
 
 function formatYear(year) {
@@ -1594,4 +1748,31 @@ function row(label, value) {
         <span>${label}</span>
         <span>${value || "Unknown"}</span>
     </div>`;
+}
+
+
+/* ==========================================================================
+   13. PAGE NAVIGATION OBSERVER FOR FIRST LOAD & RESET
+   ========================================================================== */
+
+const selectorNav = document.getElementById('pageSelector');
+
+if (selectorNav) {
+    const musicObserver = new MutationObserver(() => {
+        if (!selectorNav.classList.contains('at-start')) {
+            resetMusicPanels();
+        }
+    });
+
+    musicObserver.observe(selectorNav, { attributes: true, attributeFilter: ['class'] });
+
+    selectorNav.querySelectorAll('i').forEach(navBtn => {
+        navBtn.addEventListener('click', () => {
+            setTimeout(() => {
+                if (!selectorNav.classList.contains('at-start')) {
+                    resetMusicPanels();
+                }
+            }, 50);
+        });
+    });
 }

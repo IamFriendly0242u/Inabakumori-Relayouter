@@ -31,6 +31,9 @@ let calIsPanelAnimating = false;
 let calScrollAnimation = null;
 let calSelectedDayElement = null;
 let calBtnTimeout = null;
+let calFadeDebounce = null;
+
+let eventMarqueeHandles = [];
 
 const calMonthNames = [
     "JANUARY", "FEBRUARY", "MARCH", "APRIL",
@@ -45,88 +48,7 @@ const calFullDayNames = [
 
 
 /* ==========================================================================
-   2. INTERNATIONAL SPECIAL DAYS DATABASE
-   ========================================================================== */
-
-const specialObservances = {
-    "1-1": ["New Year's Day", "Global Family Day"],
-    "1-4": ["World Braille Day"],
-    "1-24": ["International Day of Education"],
-    "1-27": ["International Holocaust Remembrance Day"],
-    "2-2": ["World Wetlands Day"],
-    "2-4": ["World Cancer Day"],
-    "2-14": ["Valentine's Day", "International Book Giving Day"],
-    "2-20": ["World Day of Social Justice"],
-    "2-21": ["International Mother Language Day"],
-    "3-8": ["International Women's Day"],
-    "3-14": ["International Day of Mathematics (Pi Day)"],
-    "3-20": ["International Day of Happiness", "World Frog Day"],
-    "3-21": ["World Poetry Day", "International Day of Forests"],
-    "3-22": ["World Water Day"],
-    "3-23": ["World Meteorological Day"],
-    "4-7": ["World Health Day"],
-    "4-12": ["International Day of Human Space Flight"],
-    "4-22": ["Earth Day"],
-    "4-23": ["World Book and Copyright Day"],
-    "4-29": ["International Dance Day"],
-    "5-1": ["International Workers' Day (May Day)"],
-    "5-3": ["World Press Freedom Day"],
-    "5-15": ["International Day of Families"],
-    "5-20": ["World Bee Day"],
-    "5-21": ["International Tea Day"],
-    "5-22": ["International Day for Biological Diversity"],
-    "6-1": ["Global Day of Parents", "World Milk Day"],
-    "6-3": ["World Bicycle Day"],
-    "6-5": ["World Environment Day"],
-    "6-8": ["World Oceans Day"],
-    "6-21": ["International Day of Yoga", "World Music Day"],
-    "6-30": ["International Asteroid Day"],
-    "7-6": ["World Zoonoses Day"],
-    "7-7": ["World Kiswahili Language Day"],
-    "7-11": ["World Population Day"],
-    "7-15": ["World Youth Skills Day"],
-    "7-17": ["World Day for International Justice"],
-    "7-18": ["Nelson Mandela International Day"],
-    "7-20": ["World Chess Day", "International Moon Day"],
-    "7-26": ["International Day for Mangrove Ecosystem"],
-    "7-27": ["National Scotch Day", "World Day for Grandparents"],
-    "7-28": ["World Hepatitis Day"],
-    "7-29": ["International Tiger Day"],
-    "7-30": ["International Day of Friendship"],
-    "8-8": ["International Cat Day"],
-    "8-9": ["International Day of Indigenous Peoples"],
-    "8-12": ["International Youth Day"],
-    "8-13": ["International Left-Handers Day"],
-    "8-19": ["World Humanitarian Day", "World Photography Day"],
-    "8-26": ["International Dog Day"],
-    "9-5": ["International Day of Charity"],
-    "9-8": ["International Literacy Day"],
-    "9-15": ["International Day of Democracy"],
-    "9-21": ["International Day of Peace"],
-    "9-27": ["World Tourism Day"],
-    "9-29": ["World Heart Day"],
-    "10-1": ["International Day of Older Persons", "International Coffee Day"],
-    "10-4": ["World Animal Day"],
-    "10-5": ["World Teachers' Day"],
-    "10-10": ["World Mental Health Day"],
-    "10-16": ["World Food Day"],
-    "10-24": ["United Nations Day"],
-    "10-31": ["Halloween", "World Cities Day"],
-    "11-10": ["World Science Day for Peace and Development"],
-    "11-16": ["International Day for Tolerance"],
-    "11-20": ["World Children's Day"],
-    "11-21": ["World Television Day"],
-    "12-1": ["World AIDS Day"],
-    "12-3": ["International Day of Persons with Disabilities"],
-    "12-5": ["World Soil Day"],
-    "12-10": ["Human Rights Day"],
-    "12-18": ["International Migrants Day"],
-    "12-25": ["Christmas Day"]
-};
-
-
-/* ==========================================================================
-   3. CLOCK SYNC & PANEL DATA UPDATES
+   2. CLOCK SYNC & PANEL DATA UPDATES
    ========================================================================== */
 
 function syncPanelClock() {
@@ -146,7 +68,94 @@ function syncPanelClock() {
 setInterval(syncPanelClock, 1000);
 syncPanelClock();
 
-function updateLeftPanelData(dayNumber, dateObj) {
+function stopEventMarquees() {
+    eventMarqueeHandles.forEach(h => {
+        if (h) {
+            if (h.raf) cancelAnimationFrame(h.raf);
+            if (h.timeout) clearTimeout(h.timeout);
+        }
+    });
+    eventMarqueeHandles = [];
+}
+
+function createEventMarquee(wrapper, track, text, index, baseDelay) {
+    if (!wrapper || !track) return;
+
+    track.style.transform = "translateX(0px)";
+    track.innerHTML = `<span>${text}</span>`;
+
+    const handleObj = { raf: null, timeout: null };
+    eventMarqueeHandles[index] = handleObj;
+
+    const SPEED_PX_PER_SEC = 30;
+    const PAUSE_DURATION = 3000;
+
+    let initialWait = (baseDelay * 1000) + PAUSE_DURATION;
+
+    handleObj.timeout = setTimeout(() => {
+        let maxScroll = track.scrollWidth - wrapper.clientWidth;
+        if (maxScroll <= 2) {
+            track.style.transform = "translateX(0px)";
+            return;
+        }
+
+        let scrollDuration = Math.max(1500, (maxScroll / SPEED_PX_PER_SEC) * 1000);
+        let state = "SCROLL_RIGHT";
+        let startTime = performance.now();
+
+        function step(now) {
+            if (!track || !wrapper) return;
+
+            maxScroll = track.scrollWidth - wrapper.clientWidth;
+            if (maxScroll <= 2) {
+                track.style.transform = "translateX(0px)";
+                return;
+            }
+
+            if (state === "SCROLL_RIGHT") {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / scrollDuration, 1);
+                track.style.transform = `translateX(${-progress * maxScroll}px)`;
+
+                if (progress >= 1) {
+                    state = "WAIT_END";
+                    handleObj.timeout = setTimeout(() => {
+                        state = "SCROLL_LEFT";
+                        startTime = performance.now();
+                        handleObj.raf = requestAnimationFrame(step);
+                    }, PAUSE_DURATION);
+                    return;
+                }
+            } else if (state === "SCROLL_LEFT") {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / scrollDuration, 1);
+                track.style.transform = `translateX(${-(1 - progress) * maxScroll}px)`;
+
+                if (progress >= 1) {
+                    state = "WAIT_START";
+                    handleObj.timeout = setTimeout(() => {
+                        maxScroll = track.scrollWidth - wrapper.clientWidth;
+                        if (maxScroll <= 2) {
+                            track.style.transform = "translateX(0px)";
+                            return;
+                        }
+                        scrollDuration = Math.max(1500, (maxScroll / SPEED_PX_PER_SEC) * 1000);
+                        state = "SCROLL_RIGHT";
+                        startTime = performance.now();
+                        handleObj.raf = requestAnimationFrame(step);
+                    }, PAUSE_DURATION);
+                    return;
+                }
+            }
+
+            handleObj.raf = requestAnimationFrame(step);
+        }
+
+        handleObj.raf = requestAnimationFrame(step);
+    }, initialWait);
+}
+
+function updateLeftPanelData(dayNumber, dateObj, isPanelAlreadyOpen = false) {
     let dayOfWeek = calFullDayNames[dateObj.getDay()];
     let monthName = calMonthNames[dateObj.getMonth()];
     let yearNum = dateObj.getFullYear();
@@ -159,21 +168,48 @@ function updateLeftPanelData(dayNumber, dateObj) {
         calSelectedDateDisplay.innerHTML = `${monthName} ${dayNumber}, ${yearNum}`;
     }
 
+    stopEventMarquees();
+
     if (calEventsList) {
         calEventsList.innerHTML = '';
         let key = `${monthNum}-${dayNumber}`;
-        let events = specialObservances[key];
+        let events = (typeof specialObservances !== 'undefined') ? specialObservances[key] : null;
+
+        let startDelay = isPanelAlreadyOpen ? 0 : 1.5;
 
         if (events && events.length > 0) {
-            events.forEach(evtText => {
+            events.forEach((evt, idx) => {
                 let div = document.createElement('div');
                 div.classList.add('event-item');
-                div.innerHTML = evtText;
+                let itemDelay = startDelay + (idx * 1.0);
+                div.style.animationDelay = `${itemDelay}s`;
+
+                let eventName = (typeof evt === 'object' && evt.name) ? evt.name : evt;
+                let isOfficial = (typeof evt === 'object' && evt.official);
+                let iconSrc = isOfficial ? 'assets/icons/icons8-check-32.png' : 'assets/icons/icons8-question-32.png';
+                let iconTitle = isOfficial ? 'Official Observance' : 'Unofficial Observance';
+
+                div.innerHTML = `
+                    <div class="event-text-wrapper">
+                        <div class="event-text-track">
+                            <span>${eventName}</span>
+                        </div>
+                    </div>
+                    <div class="event-badge" title="${iconTitle}">
+                        <img src="${iconSrc}">
+                    </div>
+                `;
+
                 calEventsList.appendChild(div);
+
+                let wrapper = div.querySelector('.event-text-wrapper');
+                let track = div.querySelector('.event-text-track');
+                createEventMarquee(wrapper, track, eventName, idx, itemDelay);
             });
         } else {
             let div = document.createElement('div');
             div.classList.add('event-item', 'no-event');
+            div.style.animationDelay = `${startDelay}s`;
             div.innerHTML = 'No Special Observances';
             calEventsList.appendChild(div);
         }
@@ -182,7 +218,7 @@ function updateLeftPanelData(dayNumber, dateObj) {
 
 
 /* ==========================================================================
-   4. NAVIGATION EVENT LISTENERS & AUTO RESET
+   3. NAVIGATION EVENT LISTENERS & AUTO RESET
    ========================================================================== */
 
 function isLeftPanelOpen() {
@@ -203,38 +239,60 @@ function closeLeftPanel(force = false) {
     calIsPanelAnimating = true;
     if (calBtnTimeout) clearTimeout(calBtnTimeout);
 
-    if (calCloseBtn) {
-        calCloseBtn.innerHTML = '&lt;';
+    let eventItems = calEventsList ? calEventsList.querySelectorAll('.event-item') : [];
+
+    if (eventItems.length > 0 && !force) {
+        eventItems.forEach(item => {
+            item.style.animationDelay = '0s';
+            item.style.animation = 'none';
+            void item.offsetWidth;
+            item.classList.add('closing');
+        });
+
+        setTimeout(() => {
+            executePanelClose();
+        }, 400);
+    } else {
+        executePanelClose();
     }
 
-    if (calPanelTop) {
-        calPanelTop.classList.add('hide-top-info');
-    }
+    function executePanelClose() {
+        stopEventMarquees();
 
-    if (calPanelLeft) {
-        calPanelLeft.classList.add('hide-panel');
-    }
-
-    if (calSelectedDayElement) {
-        calSelectedDayElement.classList.remove('selected-day');
-        calSelectedDayElement = null;
-    }
-
-    calBtnTimeout = setTimeout(() => {
         if (calCloseBtn) {
-            calCloseBtn.classList.remove('btn-visible');
+            calCloseBtn.innerHTML = '&lt;';
         }
-        if (calTimeDisplayBottom) {
-            calTimeDisplayBottom.classList.remove('hide-time');
+
+        if (calPanelTop) {
+            calPanelTop.classList.add('hide-top-info');
         }
-        calIsPanelAnimating = false;
-    }, 1500);
+
+        if (calPanelLeft) {
+            calPanelLeft.classList.add('hide-panel');
+        }
+
+        if (calSelectedDayElement) {
+            calSelectedDayElement.classList.remove('selected-day');
+            calSelectedDayElement = null;
+        }
+
+        calBtnTimeout = setTimeout(() => {
+            if (calCloseBtn) {
+                calCloseBtn.classList.remove('btn-visible');
+            }
+            if (calTimeDisplayBottom) {
+                calTimeDisplayBottom.classList.remove('hide-time');
+            }
+            calIsPanelAnimating = false;
+        }, 1500);
+    }
 }
 
 function openLeftPanel(dayNumber, dateObj) {
-    updateLeftPanelData(dayNumber, dateObj);
+    let wasOpen = isLeftPanelOpen();
+    updateLeftPanelData(dayNumber, dateObj, wasOpen);
 
-    if (isLeftPanelOpen()) {
+    if (wasOpen) {
         return;
     }
 
@@ -269,6 +327,36 @@ function openLeftPanel(dayNumber, dateObj) {
     }, 1500);
 }
 
+function triggerMonthChange(delta) {
+    if (calIsYearPickerOpen) return;
+
+    calActiveMonth += delta;
+    if (calActiveMonth < 0) {
+        calActiveMonth = 11;
+        calActiveYear--;
+    } else if (calActiveMonth > 11) {
+        calActiveMonth = 0;
+        calActiveYear++;
+    }
+
+    if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
+    if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+
+    if (calDaysWrapper) calDaysWrapper.classList.add('fading');
+    if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
+
+    if (calFadeDebounce) clearTimeout(calFadeDebounce);
+
+    calFadeDebounce = setTimeout(() => {
+        let wasPanelOpen = isLeftPanelOpen();
+        renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
+
+        if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
+        if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
+        calFadeDebounce = null;
+    }, 300);
+}
+
 function resetCalendarToCurrentDate() {
     let realToday = new Date();
     let realMonth = realToday.getMonth();
@@ -284,7 +372,21 @@ function resetCalendarToCurrentDate() {
     if (calActiveMonth !== realMonth || calActiveYear !== realYear) {
         calActiveMonth = realMonth;
         calActiveYear = realYear;
-        renderCalendar();
+
+        if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
+        if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+
+        if (calDaysWrapper) calDaysWrapper.classList.add('fading');
+        if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
+
+        if (calFadeDebounce) clearTimeout(calFadeDebounce);
+
+        calFadeDebounce = setTimeout(() => {
+            renderCalendar();
+            if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
+            if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
+            calFadeDebounce = null;
+        }, 300);
     }
 }
 
@@ -368,20 +470,12 @@ function getAutoTargetDay() {
 if (calPrevBtn) {
     calPrevBtn.addEventListener('click', (evt) => {
         evt.stopPropagation();
-        if (calIsTransitioning) return;
-
         if (calIsYearPickerOpen) {
             calActiveYear--;
             if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
             scrollToYear(calActiveYear, 500);
         } else {
-            let wasPanelOpen = isLeftPanelOpen();
-            calActiveMonth--;
-            if (calActiveMonth < 0) {
-                calActiveMonth = 11;
-                calActiveYear--;
-            }
-            renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
+            triggerMonthChange(-1);
         }
     });
 }
@@ -389,20 +483,12 @@ if (calPrevBtn) {
 if (calNextBtn) {
     calNextBtn.addEventListener('click', (evt) => {
         evt.stopPropagation();
-        if (calIsTransitioning) return;
-
         if (calIsYearPickerOpen) {
             calActiveYear++;
             if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
             scrollToYear(calActiveYear, 500);
         } else {
-            let wasPanelOpen = isLeftPanelOpen();
-            calActiveMonth++;
-            if (calActiveMonth > 11) {
-                calActiveMonth = 0;
-                calActiveYear++;
-            }
-            renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
+            triggerMonthChange(1);
         }
     });
 }
@@ -410,7 +496,6 @@ if (calNextBtn) {
 if (calMonthDisplay) {
     calMonthDisplay.addEventListener('click', (evt) => {
         evt.stopPropagation();
-        if (calIsTransitioning) return;
 
         let now = new Date();
         let wasPanelOpen = isLeftPanelOpen();
@@ -419,20 +504,47 @@ if (calMonthDisplay) {
             toggleYearPicker(false, () => {
                 calActiveMonth = now.getMonth();
                 calActiveYear = now.getFullYear();
-                renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
+
+                if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
+                if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+
+                if (calDaysWrapper) calDaysWrapper.classList.add('fading');
+                if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
+
+                if (calFadeDebounce) clearTimeout(calFadeDebounce);
+
+                calFadeDebounce = setTimeout(() => {
+                    renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
+                    if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
+                    if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
+                    calFadeDebounce = null;
+                }, 300);
             });
         } else {
             if (calActiveMonth === now.getMonth() && calActiveYear === now.getFullYear()) return;
-            fadeTransition(() => {
-                calActiveMonth = now.getMonth();
-                calActiveYear = now.getFullYear();
+            calActiveMonth = now.getMonth();
+            calActiveYear = now.getFullYear();
+
+            if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
+            if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+
+            if (calDaysWrapper) calDaysWrapper.classList.add('fading');
+            if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
+
+            if (calFadeDebounce) clearTimeout(calFadeDebounce);
+
+            calFadeDebounce = setTimeout(() => {
                 renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
-            });
+                if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
+                if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
+                calFadeDebounce = null;
+            }, 300);
         }
     });
 }
 
 if (calYearDisplay) {
+    calYearDisplay.innerHTML = calActiveYear;
     calYearDisplay.addEventListener('click', (evt) => {
         evt.stopPropagation();
         if (calIsTransitioning) return;
@@ -446,26 +558,8 @@ if (calYearDisplay) {
 
 
 /* ==========================================================================
-   5. TRANSITION HELPERS & YEAR PICKER LOGIC
+   4. TRANSITION HELPERS & YEAR PICKER LOGIC
    ========================================================================== */
-
-function fadeTransition(updateCallback) {
-    if (calIsTransitioning || !calDaysWrapper) return;
-    calIsTransitioning = true;
-
-    calDaysWrapper.classList.add('fading');
-    if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
-
-    setTimeout(() => {
-        if (updateCallback) updateCallback();
-        calDaysWrapper.classList.remove('fading');
-        if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
-
-        setTimeout(() => {
-            calIsTransitioning = false;
-        }, 750);
-    }, 750);
-}
 
 function toggleYearPicker(show, onComplete) {
     if (calIsTransitioning) return;
@@ -547,7 +641,7 @@ function renderYearsList() {
 
 
 /* ==========================================================================
-   6. CALENDAR RENDER ENGINE
+   5. CALENDAR RENDER ENGINE
    ========================================================================== */
 
 function renderCalendar(autoSelectDay = null) {

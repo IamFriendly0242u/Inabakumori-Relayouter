@@ -397,27 +397,104 @@ html, body {
 .event-item {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 10px 14px;
+    border-radius: 14px;
+    padding: 6px 8px 6px 14px;
     font-size: 0.85rem;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.85);
     display: flex;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    line-height: 1.3;
+    justify-content: space-between;
+    height: 48px;
+    box-sizing: border-box;
     transition: background 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0;
+    animation: eventRevealIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.event-item.closing {
+    animation: eventRevealOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards !important;
+}
+
+@keyframes eventRevealIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-50px);
+        clip-path: inset(100% 0 0 0);
+        filter: blur(6px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+        clip-path: inset(0 0 0 0);
+        filter: blur(0px);
+    }
+}
+
+@keyframes eventRevealOut {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+        clip-path: inset(0 0 0 0);
+        filter: blur(0px);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-50px);
+        clip-path: inset(100% 0 0 0);
+        filter: blur(6px);
+    }
 }
 
 .event-item:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
+.event-text-wrapper {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+}
+
+.event-text-track {
+    display: inline-flex;
+    width: max-content;
+    align-items: center;
+    will-change: transform;
+}
+
+.event-text-track span {
+    white-space: nowrap;
+}
+
+.event-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.event-badge img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
 .no-event {
     color: rgba(255, 255, 255, 0.35);
     font-style: italic;
     border-style: dashed;
+    justify-content: center;
 }
 
 #calendar-header {
@@ -795,6 +872,12 @@ html, body {
     box-shadow: 0 0 50px black;
 }
 
+#switch-menu.controls-locked {
+    pointer-events: none !important;
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+}
+
 #settings-menu {
     position: absolute;
     top: 60px;
@@ -811,6 +894,39 @@ html, body {
 #settings-menu:hover {
     transform: scale(1);
     box-shadow: 0 0 50px black;
+}
+
+#timer-menu {
+    position: absolute;
+    top: 110px;
+    right: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.616);
+    border-radius: 100vw;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    font-weight: 700;
+    transform: scale(0.8);
+    transition: transform 0.5s ease, opacity 0.5s ease, box-shadow 0.2s ease;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    z-index: 10;
+}
+
+#timer-menu:hover {
+    transform: scale(1);
+    box-shadow: 0 0 30px black;
+}
+
+#timer-menu.hide-timer {
+    transform: translateY(60px) scale(0.8) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 
@@ -976,6 +1092,26 @@ html, body {
     margin-top: 60px;
     font-size: 1rem;
     transition: transform 0.5s ease, margin-top 0.5s ease;
+    position: relative;
+}
+
+#timer-tooltip {
+    font-size: 0.9rem;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 4px;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    height: 18px;
+    line-height: 18px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+#timer-tooltip.hide-tooltip {
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
 }
 
 .media-time {
@@ -1016,6 +1152,12 @@ html, body {
     justify-content: space-between;
     align-items: center;
     transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+#media-buttons.controls-locked i {
+    pointer-events: none !important;
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
 }
 
 #media-buttons i {

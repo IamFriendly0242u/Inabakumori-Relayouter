@@ -104,6 +104,9 @@
         <div id="media-image">
             <i id="switch-menu"><img src="assets/icons/icons8-playlist-32.png"></i>
             <i id="settings-menu"><img src="assets/icons/icons8-wrench-32.png"></i>
+            <div id="timer-menu" class="hide-timer">
+                <span id="timer-text">60</span>
+            </div>
         </div>
 
         <div id="media-properties">
@@ -136,6 +139,7 @@
             </div>
 
             <div class="slider-wrapper">
+                <div id="timer-tooltip" class="hide-tooltip">Click to keep music paused</div>
                 <div class="media-time">
                     <div id="time-elapsed">--:--</div>
                     <div id="song-duration">--:--</div>
@@ -200,6 +204,7 @@
 <script src="https://kit.fontawesome.com/b9c1de485e.js" crossorigin="anonymous"></script>
 <script src="jsmediatags.min.js"></script>
 <script src="main.js"></script>
+<script src="calendar-days.js"></script>
 <script src="calendar.js"></script>
 <script src="timeupdate.js"></script>
 <script src="audioVisualizer.js"></script>
