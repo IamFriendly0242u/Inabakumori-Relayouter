@@ -11,6 +11,7 @@ let dateDisplay1 = document.getElementById('date1');
 let timeDisplayBigger = document.getElementById('timeDisplayBigger');
 let calendar = document.getElementById('calendar-wrapper');
 let media = document.getElementById('media-wrapper');
+let visualizerCanvas = document.getElementById('audiovisualizer');
 let left = document.getElementById('left');
 let center = document.getElementById('center');
 let centerIcon = document.getElementById('centerIcon');
@@ -27,6 +28,12 @@ let lastPercent = 0.5;
 let currentPercent = 0.5;
 let isScrolling = false;
 let draggingEnabled = true;
+let isNavigatingToVideo = false;
+let isIntroActive = true;
+
+let hasMediaRevealed = false;
+let hasCalendarRevealed = false;
+window.hasMediaRevealed = false;
 
 let mouse = {
     x: undefined,
@@ -44,10 +51,41 @@ const OFFLINE_ICON = 'assets/icons/icons8-no-wifi-32.png';
 
 
 /* ==========================================================================
-   3. EVENT LISTENERS (CLICK & DRAG)
+   3. UNIVERSAL GRADUAL AUDIO FADEOUT ENGINE
+   ========================================================================== */
+
+function fadeAudioToZero(durationMs = 2800) {
+    let audioEl = (typeof currentSong !== 'undefined' && currentSong && currentSong.audio) ? currentSong.audio : null;
+    let fadingEl = (typeof fadingAudioInstance !== 'undefined' && fadingAudioInstance) ? fadingAudioInstance : null;
+
+    let startVol = audioEl ? audioEl.volume : 0;
+    let startFadingVol = fadingEl ? fadingEl.volume : 0;
+    let startTime = performance.now();
+
+    let fadeTimer = setInterval(() => {
+        let elapsed = performance.now() - startTime;
+        let progress = Math.min(elapsed / durationMs, 1);
+        let factor = 1 - progress;
+
+        if (audioEl) audioEl.volume = Math.max(0, startVol * factor);
+        if (fadingEl) fadingEl.volume = Math.max(0, startFadingVol * factor);
+
+        if (progress >= 1) {
+            clearInterval(fadeTimer);
+            if (typeof stopSong === 'function') {
+                stopSong();
+            }
+        }
+    }, 25);
+}
+
+
+/* ==========================================================================
+   4. EVENT LISTENERS (CLICK & DRAG)
    ========================================================================== */
 
 left.addEventListener("click", () => {
+    if (isNavigatingToVideo || isIntroActive) return;
     scrollIndex--;
     if (scrollIndex < 0) scrollIndex = 0;
     scrollPercent = scrollPositions[scrollIndex];
@@ -56,24 +94,65 @@ left.addEventListener("click", () => {
 
 if (center) {
     center.addEventListener("click", () => {
-        // Check if user has an active internet connection
+        if (isNavigatingToVideo || isIntroActive) return;
+
         if (checkInternetStatus()) {
-            // Navigate to video player page when online
-            window.location.href = 'video/video-player.html';
+            isNavigatingToVideo = true;
+            draggingEnabled = false;
+
+            scrollIndex = 1;
+            scrollPercent = 0.5;
+            lastPercent = 0.5;
+
+            fadeAudioToZero(2000);
+
+            setTimeout(() => {
+                if (pageSelector) {
+                    pageSelector.classList.add("closing-center");
+                }
+            }, 500);
+
+            setTimeout(() => {
+                if (pageSelector) {
+                    pageSelector.classList.add("closing-sides");
+                }
+            }, 1000);
+
+            setTimeout(() => {
+                if (timeDisplayBigger) {
+                    timeDisplayBigger.classList.add("exit-clock-down");
+                }
+                if (timeDisplay) {
+                    timeDisplay.classList.add("exit-clock-down");
+                }
+            }, 1500);
+
+            setTimeout(() => {
+                if (visualizerCanvas) {
+                    visualizerCanvas.classList.add("exit-fade");
+                }
+                if (background) {
+                    background.classList.add("dim-out");
+                }
+            }, 2000);
+
+            setTimeout(() => {
+                window.location.href = 'video/video-player.html';
+            }, 2600);
+
         } else {
-            // Block navigation when offline and trigger connection status refresh
             if (!isRefreshingConnection) {
                 triggerConnectionRefresh();
             }
             scrollIndex = 1;
             scrollPercent = scrollPositions[scrollIndex];
             lastPercent = scrollPercent;
-            console.warn("Navigation blocked: Internet connection is offline.");
         }
     });
 }
 
 right.addEventListener("click", () => {
+    if (isNavigatingToVideo || isIntroActive) return;
     scrollIndex++;
     if (scrollIndex > 2) scrollIndex = 2;
     scrollPercent = scrollPositions[scrollIndex];
@@ -81,12 +160,14 @@ right.addEventListener("click", () => {
 });
 
 document.addEventListener("mousedown", (event) => {
+    if (isNavigatingToVideo || isIntroActive) return;
     mouse.firstX = event.clientX;
     mouse.firstY = event.clientY;
     isScrolling = true;
 });
 
 document.addEventListener("mouseup", () => {
+    if (isNavigatingToVideo || isIntroActive) return;
     isScrolling = false;
     mouse = {
         x: undefined,
@@ -98,7 +179,7 @@ document.addEventListener("mouseup", () => {
 });
 
 document.addEventListener("mousemove", (event) => {
-    if (draggingEnabled) {
+    if (draggingEnabled && !isNavigatingToVideo && !isIntroActive) {
         mouse.x = event.clientX;
         mouse.y = event.clientY;
         if (mouse.firstX && mouse.firstY) {
@@ -115,7 +196,7 @@ document.addEventListener("mousemove", (event) => {
 
 
 /* ==========================================================================
-   4. INTERNET CONNECTION & CENTER BUTTON REFRESH SYSTEM
+   5. INTERNET CONNECTION & CENTER BUTTON REFRESH SYSTEM
    ========================================================================== */
 
 function checkInternetStatus() {
@@ -157,7 +238,7 @@ updateCenterIcon();
 
 
 /* ==========================================================================
-   5. ANIMATION LOOP & SEQUENTIAL NAVIGATION STATES
+   6. ANIMATION LOOP & SEQUENTIAL NAVIGATION STATES
    ========================================================================== */
 
 update();
@@ -177,27 +258,45 @@ function update() {
         timeDisplayBigger.classList.add("down");
     }
 
-    if (currentPercent <= 0.08) {
-        scrollIndex = 0;
-        if (pageSelector) {
-            pageSelector.classList.add("at-start");
-            pageSelector.classList.remove("at-center", "at-end");
-        }
-    } else if (currentPercent >= 0.92) {
-        scrollIndex = 2;
-        if (pageSelector) {
-            pageSelector.classList.add("at-end");
-            pageSelector.classList.remove("at-start", "at-center");
-        }
-    } else if (currentPercent >= 0.42 && currentPercent <= 0.58) {
-        scrollIndex = 1;
-        if (pageSelector) {
-            pageSelector.classList.add("at-center");
-            pageSelector.classList.remove("at-start", "at-end");
-        }
-    } else {
-        if (pageSelector) {
-            pageSelector.classList.remove("at-start", "at-center", "at-end");
+    if (!hasMediaRevealed && currentPercent <= 0.15) {
+        hasMediaRevealed = true;
+        window.hasMediaRevealed = true;
+        if (media) media.classList.remove("widget-down");
+        setTimeout(() => {
+            if (typeof startFirstLoadCountdown === 'function') {
+                startFirstLoadCountdown();
+            }
+        }, 500);
+    }
+
+    if (!hasCalendarRevealed && currentPercent >= 0.85) {
+        hasCalendarRevealed = true;
+        if (calendar) calendar.classList.remove("widget-down");
+    }
+
+    if (!isIntroActive) {
+        if (currentPercent <= 0.08) {
+            scrollIndex = 0;
+            if (pageSelector) {
+                pageSelector.classList.add("at-start");
+                pageSelector.classList.remove("at-center", "at-end");
+            }
+        } else if (currentPercent >= 0.92) {
+            scrollIndex = 2;
+            if (pageSelector) {
+                pageSelector.classList.add("at-end");
+                pageSelector.classList.remove("at-start", "at-center");
+            }
+        } else if (currentPercent >= 0.42 && currentPercent <= 0.58) {
+            scrollIndex = 1;
+            if (pageSelector) {
+                pageSelector.classList.add("at-center");
+                pageSelector.classList.remove("at-start", "at-end");
+            }
+        } else {
+            if (pageSelector) {
+                pageSelector.classList.remove("at-start", "at-center", "at-end");
+            }
         }
     }
 
@@ -216,7 +315,7 @@ function lerp(current, target, smoothness) {
 
 
 /* ==========================================================================
-   6. MUSIC PLAYER AUTO-RESET SYSTEM
+   7. MUSIC PLAYER AUTO-RESET SYSTEM
    ========================================================================== */
 
 function resetMusicPanels() {
@@ -258,4 +357,51 @@ if (pageSelector) {
             }, 50);
         });
     });
+}
+
+
+/* ==========================================================================
+   8. INTRO CHOREOGRAPHY SEQUENCE & INITIALIZATION
+   ========================================================================== */
+
+document.body.classList.add("is-intro");
+if (timeDisplayBigger) {
+    timeDisplayBigger.classList.add("intro-clock-hide");
+}
+if (calendar) {
+    calendar.classList.add("widget-down");
+}
+if (media) {
+    media.classList.add("widget-down");
+}
+
+setTimeout(() => {
+    if (timeDisplayBigger) {
+        timeDisplayBigger.classList.remove("intro-clock-hide");
+    }
+}, 3000);
+
+setTimeout(() => {
+    if (pageSelector) {
+        pageSelector.classList.add("sides-in");
+    }
+}, 3500);
+
+setTimeout(() => {
+    if (pageSelector) {
+        pageSelector.classList.add("open-center");
+    }
+}, 4000);
+
+setTimeout(() => {
+    isIntroActive = false;
+    document.body.classList.remove("is-intro");
+    if (pageSelector) {
+        pageSelector.classList.remove("sides-in", "open-center");
+        pageSelector.classList.add("at-center");
+    }
+}, 4500);
+
+if (sessionStorage.getItem('from_video_player') === 'true') {
+    sessionStorage.removeItem('from_video_player');
 }

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osage Chan - Video Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="video-style.css">
+    <link rel="stylesheet" href="custom/video-custom-style.css">
+</head>
+<body class="is-intro">
+
+<div id="bg-canvas"></div>
+<div id="bg-noise"></div>
+
+<!-- ==========================================================================
+   1. TOPBAR HEADER
+   ========================================================================== -->
+<header id="topbar">
+    <div class="topbar-left">
+        <button class="icon-btn" id="btn-back-home" title="Return to Main Menu">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <div class="brand-badge">
+            <div class="brand-avatar"></div>
+            <div class="brand-text">
+                <span class="brand-title">Osage Chan</span>
+                <span class="brand-subtitle">INABAKUMORI VIDEO HUB</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="topbar-center">
+        <div class="search-wrapper">
+            <div class="search-box" id="search-box-container">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-input" placeholder="Click to search songs, albums, lyrics..." readonly>
+                <button class="clear-search-btn" id="clear-search"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="topbar-right">
+        <div class="stats-badge" id="video-count-badge">
+            <i class="fa-solid fa-film"></i>
+            <span id="video-count-text">42 Videos</span>
+        </div>
+        <button class="icon-btn" id="btn-custom-add" title="Manage Custom Videos">
+            <img src="../assets/icons/icons8-pencil-32.png" alt="Manage">
+        </button>
+        <button class="icon-btn" id="btn-settings" title="Settings">
+            <i class="fa-solid fa-gear"></i>
+        </button>
+    </div>
+</header>
+
+<!-- ==========================================================================
+   2. FILTER BAR & CATEGORY CHIPS
+   ========================================================================== -->
+<nav id="filter-wrapper">
+    <div id="category-chips"></div>
+</nav>
+
+<!-- ==========================================================================
+   3. MAIN CONTAINER & 2x4 PAGINATED GRID
+   ========================================================================== -->
+<main id="main-container">
+    <div id="grid-stage">
+        <button class="nav-arrow-btn" id="btn-prev-page" title="Previous Page">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+
+        <div id="video-grid-wrapper">
+            <div id="video-grid"></div>
+        </div>
+
+        <button class="nav-arrow-btn" id="btn-next-page" title="Next Page">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- ==========================================================================
+       4. PAGINATION BOTTOM DRAWER
+       ========================================================================== -->
+    <footer id="pagination-bar">
+        <div class="pagination-left">
+            <div class="mode-switch-container">
+                <div class="mode-tab-indicator" id="mode-tab-indicator"></div>
+                <button class="mode-tab active" id="tab-inaba-mode">
+                    <i class="fa-solid fa-cloud-moon"></i>
+                    <span>Inabakumori Mode</span>
+                </button>
+                <button class="mode-tab" id="tab-custom-mode">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Custom Mode</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="pagination-center">
+            <div id="pagination-dots"></div>
+        </div>
+
+        <div class="pagination-right">
+            <span id="page-counter-text">Page 1 / 6</span>
+        </div>
+    </footer>
+</main>
+
+<!-- ==========================================================================
+   5. VIDEO PLAYER MODAL OVERLAY
+   ========================================================================== -->
+<div id="video-modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <span class="modal-tag" id="modal-tag">INABAKUMORI OFFICIAL</span>
+                <span class="modal-title" id="modal-video-title">Video Title</span>
+            </div>
+            <button class="modal-close-icon" id="modal-close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="modal-screen" id="modal-screen"></div>
+
+        <div class="modal-footer">
+            <div class="modal-channel-info">
+                <div class="modal-avatar" id="modal-avatar"></div>
+                <div>
+                    <div class="modal-channel-name" id="modal-channel">Creator</div>
+                    <div class="modal-meta-text" id="modal-meta">Details</div>
+                </div>
+            </div>
+            <a href="#" target="_blank" class="modal-action-btn" id="btn-youtube-link">
+                <i class="fa-brands fa-youtube"></i> Watch on YouTube
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+   6. ENHANCED CUSTOM VIDEO INPUT MODAL
+   ========================================================================== -->
+<div id="custom-add-modal">
+    <div class="custom-modal-card">
+        <div class="custom-modal-header">
+            <div class="custom-header-info">
+                <span class="custom-header-badge">YOUTUBE IMPORTER</span>
+                <h3>Add Custom Video</h3>
+            </div>
+            <button class="modal-close-icon" id="custom-modal-close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="custom-modal-body">
+            <div class="custom-field-group">
+                <div class="field-label-row">
+                    <label>YouTube Video URL or ID</label>
+                    <span class="validation-status-text" id="url-status-text">Waiting for input...</span>
+                </div>
+                <div class="custom-input-action-row" id="url-input-wrapper">
+                    <i class="fa-brands fa-youtube input-lead-icon"></i>
+                    <input type="text" id="custom-input-url" placeholder="Paste YouTube video link (No Shorts/Posts)..." readonly>
+                    <button class="paste-action-btn" id="btn-paste-clipboard" title="Paste Link from Clipboard">
+                        <i class="fa-solid fa-paste"></i>
+                        <span>Paste</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="custom-live-preview" class="live-preview-card hide-preview">
+                <div class="live-preview-thumb-box">
+                    <img id="live-preview-img" src="" alt="Thumbnail Preview">
+                    <span class="live-preview-badge">YOUTUBE READY</span>
+                </div>
+                <div class="live-preview-meta">
+                    <span class="live-preview-title" id="live-preview-title">Video Title Preview</span>
+                    <span class="live-preview-channel" id="live-preview-channel">Creator Name</span>
+                </div>
+            </div>
+
+            <div class="custom-field-group">
+                <div class="field-label-row">
+                    <label>Video Title</label>
+                    <span class="required-badge">Required</span>
+                </div>
+                <input type="text" id="custom-input-title" placeholder="Auto-fetching title..." readonly>
+            </div>
+
+            <div class="custom-input-grid-2">
+                <div class="custom-field-group">
+                    <div class="field-label-row">
+                        <label>Channel Name</label>
+                        <span class="required-badge">Required</span>
+                    </div>
+                    <input type="text" id="custom-input-channel" placeholder="Auto-fetching creator..." readonly>
+                </div>
+                <div class="custom-field-group">
+                    <div class="field-label-row">
+                        <label>Avatar URL</label>
+                        <span class="required-badge">Required</span>
+                    </div>
+                    <input type="text" id="custom-input-avatar" placeholder="Auto-fetching avatar..." readonly>
+                </div>
+            </div>
+
+            <div class="custom-input-grid-3">
+                <div class="custom-field-group">
+                    <div class="field-label-row">
+                        <label>Duration</label>
+                        <span class="required-badge">Required</span>
+                    </div>
+                    <input type="text" id="custom-input-duration" placeholder="e.g. 02:12" readonly>
+                </div>
+                <div class="custom-field-group">
+                    <div class="field-label-row">
+                        <label>Views Count</label>
+                        <span class="required-badge">Required</span>
+                    </div>
+                    <input type="text" id="custom-input-views" placeholder="e.g. 156096" readonly>
+                </div>
+                <div class="custom-field-group">
+                    <div class="field-label-row">
+                        <label>Release Date</label>
+                        <span class="required-badge">Required</span>
+                    </div>
+                    <input type="text" id="custom-input-date" placeholder="YYYY-MM-DD" readonly>
+                </div>
+            </div>
+
+            <div class="custom-field-group">
+                <div class="field-label-row">
+                    <label>Custom Description</label>
+                    <span class="optional-badge" id="custom-desc-status">Optional</span>
+                </div>
+                <div class="custom-desc-input-row" id="custom-desc-wrapper">
+                    <input type="text" id="custom-input-desc" placeholder="The video description is not set" readonly>
+                    <button type="button" class="desc-reset-btn hide-btn" id="btn-reset-desc" title="Restore Default YouTube Description">
+                        <img src="../assets/icons/icons8-undo-32.png" alt="Reset">
+                    </button>
+                </div>
+            </div>
+
+            <div class="custom-field-group">
+                <div class="field-label-row">
+                    <label>Category Tag</label>
+                    <span class="required-badge">Required</span>
+                </div>
+                <div class="custom-tag-manager">
+                    <div class="custom-tag-selector" id="custom-tag-selector"></div>
+                    <div class="custom-new-tag-row">
+                        <input type="text" id="custom-input-new-tag" placeholder="Or type new category name..." readonly>
+                        <button type="button" class="add-tag-action-btn" id="btn-create-tag">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Create Tag</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="custom-modal-footer">
+            <button class="custom-btn-secondary" id="btn-cancel-custom">Cancel</button>
+            <button class="custom-btn-primary" id="btn-save-custom" disabled>
+                <i class="fa-solid fa-plus"></i>
+                <span>Add to Collection</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+   7. NOTICE MODAL CARD
+   ========================================================================== -->
+<div id="custom-warning-modal">
+    <div class="custom-warning-card">
+        <div class="custom-warning-badge">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="custom-warning-header">
+            <span class="custom-warning-tag">IMPORTANT NOTICE</span>
+            <h3 class="custom-warning-title">Custom Videos Mode</h3>
+        </div>
+        <div class="custom-warning-body">
+            <p>Custom Mode allows you to import and embed any official YouTube video directly into your personal gallery.</p>
+            <div class="custom-warning-note">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>An active internet connection is required to load video metadata, descriptions, thumbnails, and stream playback.</span>
+            </div>
+        </div>
+        <label class="custom-warning-checkbox-label">
+            <input type="checkbox" id="chk-dont-show-again">
+            <span>Don't show this message again in this session</span>
+        </label>
+        <div class="custom-warning-actions">
+            <button class="custom-warning-btn" id="btn-dismiss-warning">Understood</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+   8. UNIVERSAL VIRTUAL KEYBOARD
+   ========================================================================== -->
+<div class="virtual-keyboard" id="virtual-keyboard">
+    <div class="vk-header">
+        <span id="vk-target-indicator">VIRTUAL KEYBOARD</span>
+        <button class="vk-close-btn" id="vk-btn-close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="vk-rows">
+        <div class="vk-row">
+            <button class="vk-key" data-key="1">1</button>
+            <button class="vk-key" data-key="2">2</button>
+            <button class="vk-key" data-key="3">3</button>
+            <button class="vk-key" data-key="4">4</button>
+            <button class="vk-key" data-key="5">5</button>
+            <button class="vk-key" data-key="6">6</button>
+            <button class="vk-key" data-key="7">7</button>
+            <button class="vk-key" data-key="8">8</button>
+            <button class="vk-key" data-key="9">9</button>
+            <button class="vk-key" data-key="0">0</button>
+            <button class="vk-key vk-key-action" id="vk-key-backspace"><i class="fa-solid fa-delete-left"></i></button>
+        </div>
+        <div class="vk-row">
+            <button class="vk-key" data-key="q">q</button>
+            <button class="vk-key" data-key="w">w</button>
+            <button class="vk-key" data-key="e">e</button>
+            <button class="vk-key" data-key="r">r</button>
+            <button class="vk-key" data-key="t">t</button>
+            <button class="vk-key" data-key="y">y</button>
+            <button class="vk-key" data-key="u">u</button>
+            <button class="vk-key" data-key="i">i</button>
+            <button class="vk-key" data-key="o">o</button>
+            <button class="vk-key" data-key="p">p</button>
+            <button class="vk-key" data-key="-">-</button>
+        </div>
+        <div class="vk-row">
+            <button class="vk-key" data-key="a">a</button>
+            <button class="vk-key" data-key="s">s</button>
+            <button class="vk-key" data-key="d">d</button>
+            <button class="vk-key" data-key="f">f</button>
+            <button class="vk-key" data-key="g">g</button>
+            <button class="vk-key" data-key="h">h</button>
+            <button class="vk-key" data-key="j">j</button>
+            <button class="vk-key" data-key="k">k</button>
+            <button class="vk-key" data-key="l">l</button>
+            <button class="vk-key" data-key="_">_</button>
+            <button class="vk-key vk-key-action" id="vk-key-caps"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+        </div>
+        <div class="vk-row">
+            <button class="vk-key vk-key-action" id="vk-key-clear">CLEAR</button>
+            <button class="vk-key" data-key="z">z</button>
+            <button class="vk-key" data-key="x">x</button>
+            <button class="vk-key" data-key="c">c</button>
+            <button class="vk-key" data-key="v">v</button>
+            <button class="vk-key" data-key="b">b</button>
+            <button class="vk-key" data-key="n">n</button>
+            <button class="vk-key" data-key="m">m</button>
+            <button class="vk-key" data-key=":">:</button>
+            <button class="vk-key" data-key="/">/</button>
+            <button class="vk-key" data-key=".">.</button>
+        </div>
+        <div class="vk-row">
+            <button class="vk-key vk-key-nav" id="vk-key-left"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="vk-key vk-key-space" id="vk-key-space">SPACE</button>
+            <button class="vk-key vk-key-nav" id="vk-key-right"><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="vk-key vk-key-done" id="vk-key-done">DONE</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================================================
+   9. SCRIPTS INJECTION
+   ========================================================================== -->
+<script src="data/video-data.js"></script>
+<script src="data/video-data-dynamic.js"></script>
+<script src="custom/video-custom.js"></script>
+<script src="video-player.js"></script>
+</body>
+</html>

@@ -1,0 +1,904 @@
+/* ==========================================================================
+   1. BUTTON & BADGE ACTION CONTROLS
+   ========================================================================== */
+
+#btn-custom-add {
+    width: 0;
+    height: 42px;
+    opacity: 0;
+    transform: scale(0.6);
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: none;
+    box-shadow: none;
+    transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease;
+}
+
+#btn-custom-add.btn-visible {
+    width: 42px;
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+#btn-custom-add.edit-active {
+    background: #ffffff !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.stats-badge.delete-mode-badge {
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.stats-badge.delete-mode-badge:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: scale(1.02);
+}
+
+.stats-badge.badge-action-delete {
+    background: #e74c3c !important;
+    border-color: #e74c3c !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    cursor: pointer;
+}
+
+.stats-badge.badge-action-delete:hover {
+    background: #c0392b !important;
+    transform: scale(1.03);
+}
+
+#category-chips.edit-align-right {
+    justify-content: flex-end;
+}
+
+.chip-btn.tag-delete-selected {
+    border-color: #e74c3c !important;
+    background: rgba(231, 76, 60, 0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+.chip-btn.chip-action-delete {
+    background: rgba(231, 76, 60, 0.12);
+    border-color: rgba(231, 76, 60, 0.25);
+    color: #e74c3c;
+}
+
+.chip-btn.chip-action-delete:hover {
+    background: rgba(231, 76, 60, 0.22);
+    color: #ffffff;
+}
+
+.chip-btn.chip-action-customize {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.video-card.card-delete-selected {
+    border-color: #e74c3c !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+    background: rgba(35, 24, 25, 0.95) !important;
+}
+
+
+/* ==========================================================================
+   2. SEQUENTIAL DELETE KEYFRAME ANIMATIONS
+   ========================================================================== */
+
+@keyframes cardFlipOut3D {
+    0% {
+        transform: perspective(1000px) rotateY(0deg) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: perspective(1000px) rotateY(-45deg) scale(0.9);
+        opacity: 0.7;
+    }
+    100% {
+        transform: perspective(1000px) rotateY(-90deg) scale(0.7);
+        opacity: 0;
+    }
+}
+
+.anim-flip-out {
+    animation: cardFlipOut3D 1s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+}
+
+@keyframes chipSlideUpOut {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-40px) scale(0.8);
+        opacity: 0;
+    }
+}
+
+.anim-slide-up-out {
+    animation: chipSlideUpOut 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+}
+
+
+/* ==========================================================================
+   3. CUSTOM ADD MODAL LAYOUT & FORM STYLES
+   ========================================================================== */
+
+#custom-add-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#custom-add-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.custom-modal-card {
+    width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    transform: scale(0.96);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.custom-modal-card::-webkit-scrollbar {
+    display: none;
+}
+
+#custom-add-modal.active .custom-modal-card {
+    transform: scale(1);
+}
+
+.custom-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.custom-header-badge {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+}
+
+.custom-modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #ffffff;
+}
+
+.custom-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.custom-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.custom-input-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.custom-input-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.field-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    width: 100%;
+    min-height: 16px;
+    overflow: hidden;
+}
+
+.custom-field-group label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.optional-badge {
+    font-size: 0.58rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: right;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.required-badge {
+    font-size: 0.58rem;
+    color: #e74c3c;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-align: right;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.validation-status-text {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    transition: color 0.2s ease;
+}
+
+.validation-status-text.status-fetching {
+    color: #f1c40f !important;
+}
+
+.validation-status-text.status-valid {
+    color: #2ecc71 !important;
+}
+
+.validation-status-text.status-invalid {
+    color: #e74c3c !important;
+}
+
+.custom-input-action-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 4px 6px 4px 14px;
+    transition: border-color 0.2s ease;
+}
+
+.input-lead-icon {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    transition: color 0.2s ease;
+}
+
+.custom-input-action-row input {
+    background: transparent !important;
+    border: none !important;
+    padding: 8px 4px !important;
+    box-shadow: none !important;
+}
+
+.custom-input-action-row.state-fetching {
+    border-color: #f1c40f !important;
+    box-shadow: none !important;
+}
+
+.custom-input-action-row.state-fetching .input-lead-icon {
+    color: #f1c40f !important;
+}
+
+.custom-input-action-row.state-valid {
+    border-color: #2ecc71 !important;
+    box-shadow: none !important;
+}
+
+.custom-input-action-row.state-valid .input-lead-icon {
+    color: #2ecc71 !important;
+}
+
+.custom-input-action-row.state-invalid {
+    border-color: #e74c3c !important;
+    box-shadow: none !important;
+}
+
+.custom-input-action-row.state-invalid .input-lead-icon {
+    color: #e74c3c !important;
+}
+
+.custom-desc-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    position: relative;
+}
+
+.custom-desc-input-row input {
+    flex: 1;
+}
+
+#custom-input-desc.default-desc-active::placeholder {
+    color: #2ecc71 !important;
+    font-weight: 700;
+}
+
+.desc-reset-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #e6e6e6;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.desc-reset-btn.hide-btn {
+    width: 0;
+    opacity: 0;
+    transform: scale(0.5);
+    pointer-events: none;
+    border: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+.desc-reset-btn:hover {
+    background: #ffffff;
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.desc-reset-btn img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    filter: brightness(0);
+}
+
+.custom-modal-body input {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 9px 12px;
+    color: #ffffff;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+    width: 100%;
+}
+
+.custom-modal-body input:hover,
+.custom-modal-body input.input-active {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow: none;
+}
+
+.custom-modal-body input.input-invalid {
+    border-color: #e74c3c !important;
+    color: #e74c3c !important;
+    box-shadow: none !important;
+}
+
+.custom-modal-body input.auto-locked {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(255, 255, 255, 0.35) !important;
+    cursor: not-allowed !important;
+    user-select: none !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+}
+
+.custom-modal-body input.manual-allowed {
+    background: rgba(0, 0, 0, 0.45) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    box-shadow: none !important;
+}
+
+.custom-modal-body input.manual-allowed:hover,
+.custom-modal-body input.manual-allowed.input-active {
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    background: rgba(0, 0, 0, 0.65) !important;
+    box-shadow: none !important;
+}
+
+#custom-input-duration.manual-allowed,
+#custom-input-date.manual-allowed {
+    border-color: rgba(231, 76, 60, 0.6) !important;
+    box-shadow: none !important;
+}
+
+#custom-input-duration.manual-allowed:hover,
+#custom-input-duration.manual-allowed.input-active,
+#custom-input-date.manual-allowed:hover,
+#custom-input-date.manual-allowed.input-active {
+    border-color: #e74c3c !important;
+    box-shadow: none !important;
+}
+
+.paste-action-btn {
+    padding: 8px 14px;
+    background: #e6e6e6;
+    border: none;
+    border-radius: 10px;
+    color: #000000;
+    font-size: 0.76rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.paste-action-btn:hover:not(:disabled) {
+    background: #ffffff;
+    transform: scale(1.03);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.paste-action-btn.pasted {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+.live-preview-card {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 8px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity: 1;
+    max-height: 100px;
+}
+
+.live-preview-card.hide-preview {
+    opacity: 0;
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    pointer-events: none;
+}
+
+.live-preview-thumb-box {
+    position: relative;
+    width: 120px;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #111;
+    flex-shrink: 0;
+}
+
+.live-preview-thumb-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.live-preview-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #2ecc71;
+    transition: color 0.2s ease;
+}
+
+.live-preview-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.live-preview-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.live-preview-channel {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.custom-tag-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-tag-selector {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    padding-bottom: 4px;
+    width: 100%;
+    transition: opacity 0.2s ease;
+}
+
+.custom-tag-selector::-webkit-scrollbar {
+    display: none;
+}
+
+.tag-chip {
+    padding: 6px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tag-chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+
+.tag-chip.active {
+    background: #ffffff;
+    color: #000000;
+    font-weight: 800;
+    border-color: #ffffff;
+    box-shadow: none;
+}
+
+.custom-new-tag-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.custom-new-tag-row input {
+    flex: 1;
+    font-size: 0.78rem !important;
+    padding: 8px 12px !important;
+}
+
+.add-tag-action-btn {
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.add-tag-action-btn:hover {
+    background: #ffffff;
+    color: #000000;
+    box-shadow: none;
+}
+
+.custom-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.custom-btn-secondary {
+    padding: 9px 18px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.custom-btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.custom-btn-primary {
+    padding: 9px 22px;
+    background: #e6e6e6;
+    border: none;
+    color: #000000;
+    border-radius: 14px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+}
+
+.custom-btn-primary:hover:not(:disabled) {
+    background: #ffffff;
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.custom-btn-primary:disabled,
+.paste-action-btn:disabled,
+.add-tag-action-btn:disabled {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+
+/* ==========================================================================
+   4. NOTICE MODAL CARD & CHECKBOX CONTROLS
+   ========================================================================== */
+
+#custom-warning-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#custom-warning-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.custom-warning-card {
+    width: 480px;
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 26px;
+    padding: 28px 26px 24px 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    transform: translateY(-40px) scale(0.94);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+
+#custom-warning-modal.active .custom-warning-card {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+#custom-warning-modal.closing .custom-warning-card {
+    transform: translateY(-40px) scale(0.94);
+    opacity: 0;
+}
+
+.custom-warning-badge {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    display: grid;
+    place-items: center;
+    font-size: 1.4rem;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.custom-warning-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.custom-warning-tag {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+}
+
+.custom-warning-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+}
+
+.custom-warning-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.custom-warning-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border-left: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 0.74rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.custom-warning-note i {
+    font-size: 0.8rem;
+    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.custom-warning-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.2s ease;
+}
+
+.custom-warning-checkbox-label:hover {
+    color: #ffffff;
+}
+
+.custom-warning-checkbox-label input {
+    accent-color: #ffffff;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+.custom-warning-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.custom-warning-btn {
+    padding: 9px 36px;
+    background: #e6e6e6;
+    border: none;
+    color: #000000;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.custom-warning-btn:hover {
+    background: #ffffff;
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.custom-warning-btn:active {
+    transform: scale(0.96);
+}
+
+
+/* ==========================================================================
+   5. CARD MULTILINE DESCRIPTION OVERRIDE
+   ========================================================================== */
+
+.card-desc-text {
+    white-space: pre-line !important;
+}

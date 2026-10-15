@@ -11,7 +11,11 @@ let calNextBtn = document.getElementById('cal-next');
 let calYearsWrapper = document.getElementById('years-wrapper');
 let calYearsList = document.getElementById('years-list');
 let calPanelLeft = document.getElementById('calendar-panel-left');
+let calRail = document.getElementById('cal-rail');
 let calCloseBtn = document.getElementById('cal-close-btn');
+let calScrollUp = document.getElementById('cal-scroll-up');
+let calScrollDown = document.getElementById('cal-scroll-down');
+let calPanelRight = document.getElementById('calendar-panel-right');
 
 let calPanelTop = document.getElementById('cal-panel-top');
 let calPanelTime = document.getElementById('panel-time');
@@ -28,12 +32,34 @@ let calActiveYear = calCurrentDate.getFullYear();
 let calIsYearPickerOpen = false;
 let calIsTransitioning = false;
 let calIsPanelAnimating = false;
+let calIsRightPanelOpen = false;
+let calIsContentLoading = false;
+let calPendingClose = false;
+let calContentLoadTimeout = null;
 let calScrollAnimation = null;
 let calSelectedDayElement = null;
 let calBtnTimeout = null;
 let calFadeDebounce = null;
 
 let eventMarqueeHandles = [];
+
+const CAL_VIEW_SPECIAL_DAYS = "SPECIAL DAYS";
+const CAL_VIEW_CALENDARS = "CALENDARS";
+const CAL_VIEW_OBSERVANCES = "SPECIAL OBSERVANCES";
+
+const calViewSequence = [
+    CAL_VIEW_SPECIAL_DAYS,
+    CAL_VIEW_CALENDARS,
+    CAL_VIEW_OBSERVANCES
+];
+
+let calCurrentView = CAL_VIEW_CALENDARS;
+let calActiveDayNum = 1;
+let calActiveDateObj = new Date();
+
+let calNationalHolidaysCache = {};
+let calHolidayFetchStatus = "idle";
+let calHolidayFetchErrorMsg = "";
 
 const calMonthNames = [
     "JANUARY", "FEBRUARY", "MARCH", "APRIL",
@@ -67,6 +93,155 @@ function syncPanelClock() {
 
 setInterval(syncPanelClock, 1000);
 syncPanelClock();
+
+function detectUserCountryCode() {
+    try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+        if (tz.includes("Jakarta") || tz.includes("Makassar") || tz.includes("Jayapura") || tz.includes("Pontianak")) return "ID";
+        if (tz.includes("Tokyo")) return "JP";
+        if (tz.includes("New_York") || tz.includes("Chicago") || tz.includes("Denver") || tz.includes("Los_Angeles") || tz.includes("Anchorage") || tz.includes("Honolulu")) return "US";
+        if (tz.includes("London")) return "GB";
+        if (tz.includes("Seoul")) return "KR";
+        if (tz.includes("Berlin")) return "DE";
+        if (tz.includes("Paris")) return "FR";
+        if (tz.includes("Singapore")) return "SG";
+        if (tz.includes("Kuala_Lumpur")) return "MY";
+        if (tz.includes("Bangkok")) return "TH";
+
+        const lang = navigator.language || "en-US";
+        if (lang.includes("-")) {
+            const code = lang.split("-")[1].toUpperCase();
+            if (code.length === 2) return code;
+        }
+    } catch (e) {}
+    return "ID";
+}
+
+async function loadNationalHolidays(year) {
+    const country = detectUserCountryCode();
+    const cacheKey = `osage_holidays_${country}_${year}`;
+
+    try {
+        const saved = localStorage.getItem(cacheKey);
+        if (saved) {
+            calNationalHolidaysCache = JSON.parse(saved);
+            calHolidayFetchStatus = "success";
+            calHolidayFetchErrorMsg = "";
+            return;
+        }
+    } catch (e) {}
+
+    if (!navigator.onLine) {
+        calHolidayFetchStatus = "error";
+        calHolidayFetchErrorMsg = "No internet connection to load national holidays.";
+        return;
+    }
+
+    calHolidayFetchStatus = "loading";
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (!res.ok) throw new Error("Failed HTTP status " + res.status);
+
+        const data = await res.json();
+        const mapped = {};
+
+        data.forEach(item => {
+            const parts = item.date.split('-');
+            const m = parseInt(parts[1], 10);
+            const d = parseInt(parts[2], 10);
+            const k = `${m}-${d}`;
+
+            if (!mapped[k]) mapped[k] = [];
+            mapped[k].push({
+                name: item.localName || item.name,
+                official: true
+            });
+        });
+
+        calNationalHolidaysCache = mapped;
+        calHolidayFetchStatus = "success";
+        calHolidayFetchErrorMsg = "";
+
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(mapped));
+        } catch (e) {}
+    } catch (err) {
+        calHolidayFetchStatus = "error";
+        calHolidayFetchErrorMsg = "Unable to fetch national calendar. Check your network connection.";
+    }
+}
+
+function getStoredSpecialDays(monthNum, dayNumber) {
+    try {
+        const raw = localStorage.getItem("osage_custom_special_days");
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            const key = `${monthNum}-${dayNumber}`;
+            if (parsed && Array.isArray(parsed[key]) && parsed[key].length > 0) {
+                return parsed[key];
+            }
+        }
+    } catch (e) {}
+    return null;
+}
+
+function updateScrollButtonsVisibility() {
+    if (!calEventsList || !calScrollUp || !calScrollDown) return;
+
+    if (calIsContentLoading || (calPanelLeft && calPanelLeft.classList.contains('rail-only'))) {
+        calScrollUp.classList.add('hidden');
+        calScrollDown.classList.add('hidden');
+        return;
+    }
+
+    const scrollHeight = calEventsList.scrollHeight;
+    const clientHeight = calEventsList.clientHeight;
+    const scrollTop = calEventsList.scrollTop;
+    const maxScroll = scrollHeight - clientHeight;
+
+    if (maxScroll <= 4) {
+        calScrollUp.classList.add('hidden');
+        calScrollDown.classList.add('hidden');
+        return;
+    }
+
+    if (scrollTop <= 2) {
+        calScrollUp.classList.add('hidden');
+    } else {
+        calScrollUp.classList.remove('hidden');
+    }
+
+    if (scrollTop >= maxScroll - 2) {
+        calScrollDown.classList.add('hidden');
+    } else {
+        calScrollDown.classList.remove('hidden');
+    }
+}
+
+if (calEventsList) {
+    calEventsList.addEventListener('scroll', updateScrollButtonsVisibility);
+}
+
+if (calScrollUp) {
+    calScrollUp.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (calIsContentLoading || !calEventsList) return;
+        calEventsList.scrollBy({ top: -56, behavior: 'smooth' });
+    });
+}
+
+if (calScrollDown) {
+    calScrollDown.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (calIsContentLoading || !calEventsList) return;
+        calEventsList.scrollBy({ top: 56, behavior: 'smooth' });
+    });
+}
 
 function stopEventMarquees() {
     eventMarqueeHandles.forEach(h => {
@@ -155,7 +330,159 @@ function createEventMarquee(wrapper, track, text, index, baseDelay) {
     }, initialWait);
 }
 
+function cycleCalendarView() {
+    if (calIsContentLoading || calIsPanelAnimating) return;
+
+    const titleTextEl = document.querySelector('.events-header-title .title-text');
+    const currentIndex = calViewSequence.indexOf(calCurrentView);
+    const nextIndex = (currentIndex + 1) % calViewSequence.length;
+    calCurrentView = calViewSequence[nextIndex];
+
+    if (titleTextEl) {
+        titleTextEl.classList.remove('slide-in-right', 'slide-out-left');
+        void titleTextEl.offsetWidth;
+        titleTextEl.classList.add('slide-out-left');
+
+        setTimeout(() => {
+            titleTextEl.textContent = calCurrentView;
+            titleTextEl.classList.remove('slide-out-left');
+            void titleTextEl.offsetWidth;
+            titleTextEl.classList.add('slide-in-right');
+            renderCurrentViewContent(true);
+        }, 160);
+    } else {
+        renderCurrentViewContent(true);
+    }
+}
+
+function renderCurrentViewContent(isManualSwitch = false) {
+    const titleEl = document.querySelector('.events-header-title');
+    if (titleEl) {
+        titleEl.classList.add('clickable-tab');
+        let textSpan = titleEl.querySelector('.title-text');
+        if (!textSpan) {
+            titleEl.innerHTML = `<span class="title-text">${calCurrentView}</span>`;
+        } else {
+            textSpan.textContent = calCurrentView;
+        }
+
+        titleEl.onclick = (e) => {
+            e.stopPropagation();
+            cycleCalendarView();
+        };
+    }
+
+    if (!calEventsList) return;
+
+    stopEventMarquees();
+    calEventsList.innerHTML = '';
+    calEventsList.scrollTop = 0;
+
+    const monthNum = calActiveDateObj.getMonth() + 1;
+    const dayNumber = calActiveDayNum;
+    const key = `${monthNum}-${dayNumber}`;
+
+    let itemsToRender = [];
+    let emptyMessage = "";
+    let isErrorState = false;
+
+    if (calCurrentView === CAL_VIEW_SPECIAL_DAYS) {
+        const specialDays = getStoredSpecialDays(monthNum, dayNumber);
+        if (specialDays && specialDays.length > 0) {
+            itemsToRender = specialDays;
+        } else {
+            emptyMessage = "No Special Days recorded. Please set up your special days first.";
+        }
+    } else if (calCurrentView === CAL_VIEW_CALENDARS) {
+        if (calHolidayFetchStatus === "error") {
+            isErrorState = true;
+            emptyMessage = calHolidayFetchErrorMsg || "Unable to fetch national calendar. Check your network connection.";
+        } else {
+            const holidays = calNationalHolidaysCache[key];
+            if (holidays && holidays.length > 0) {
+                itemsToRender = holidays;
+            } else {
+                emptyMessage = "No national holidays on this date.";
+            }
+        }
+    } else if (calCurrentView === CAL_VIEW_OBSERVANCES) {
+        const dataPool = (typeof specialObservances !== 'undefined') ? specialObservances : (window.specialObservances || null);
+        const observances = dataPool ? dataPool[key] : null;
+
+        if (observances && observances.length > 0) {
+            itemsToRender = observances;
+        } else {
+            emptyMessage = "No special observances on this date.";
+        }
+    }
+
+    let startDelay = isManualSwitch ? 0.05 : 0.25;
+    let totalItems = itemsToRender.length > 0 ? itemsToRender.length : 1;
+    let staggerStep = 0.12;
+    let totalAnimTimeMs = ((startDelay + (totalItems - 1) * staggerStep) + 0.45) * 1000;
+
+    calIsContentLoading = true;
+    if (calCloseBtn) calCloseBtn.classList.add('controls-locked');
+    if (calScrollUp) calScrollUp.classList.add('hidden');
+    if (calScrollDown) calScrollDown.classList.add('hidden');
+
+    if (calContentLoadTimeout) clearTimeout(calContentLoadTimeout);
+
+    calContentLoadTimeout = setTimeout(() => {
+        calIsContentLoading = false;
+        if (calCloseBtn) calCloseBtn.classList.remove('controls-locked');
+        updateScrollButtonsVisibility();
+
+        if (calPendingClose) {
+            calPendingClose = false;
+            closeBothPanels();
+            resetCalendarToCurrentDate();
+        }
+    }, totalAnimTimeMs);
+
+    if (itemsToRender.length > 0) {
+        itemsToRender.forEach((evt, idx) => {
+            let div = document.createElement('div');
+            div.classList.add('event-item');
+            let itemDelay = startDelay + (idx * staggerStep);
+            div.style.animationDelay = `${itemDelay.toFixed(2)}s`;
+
+            let eventName = (typeof evt === 'object' && evt.name) ? evt.name : evt;
+            let isOfficial = (typeof evt === 'object' && evt.official);
+            let iconSrc = isOfficial ? 'assets/icons/icons8-check-32.png' : 'assets/icons/icons8-question-32.png';
+            let iconTitle = isOfficial ? 'Official Observance' : 'Community Observance';
+
+            div.innerHTML = `
+                <div class="event-text-wrapper">
+                    <div class="event-text-track">
+                        <span>${eventName}</span>
+                    </div>
+                </div>
+                <div class="event-badge" title="${iconTitle}">
+                    <img src="${iconSrc}">
+                </div>
+            `;
+
+            calEventsList.appendChild(div);
+
+            let wrapper = div.querySelector('.event-text-wrapper');
+            let track = div.querySelector('.event-text-track');
+            createEventMarquee(wrapper, track, eventName, idx, itemDelay);
+        });
+    } else {
+        let div = document.createElement('div');
+        div.classList.add('event-item', 'no-event');
+        if (isErrorState) div.classList.add('error-event');
+        div.style.animationDelay = `${startDelay}s`;
+        div.innerHTML = emptyMessage;
+        calEventsList.appendChild(div);
+    }
+}
+
 function updateLeftPanelData(dayNumber, dateObj, isPanelAlreadyOpen = false) {
+    calActiveDayNum = dayNumber;
+    calActiveDateObj = dateObj;
+
     let dayOfWeek = calFullDayNames[dateObj.getDay()];
     let monthName = calMonthNames[dateObj.getMonth()];
     let yearNum = dateObj.getFullYear();
@@ -168,52 +495,21 @@ function updateLeftPanelData(dayNumber, dateObj, isPanelAlreadyOpen = false) {
         calSelectedDateDisplay.innerHTML = `${monthName} ${dayNumber}, ${yearNum}`;
     }
 
-    stopEventMarquees();
+    if (!isPanelAlreadyOpen) {
+        const key = `${monthNum}-${dayNumber}`;
+        const hasCustom = getStoredSpecialDays(monthNum, dayNumber);
+        const hasNational = calNationalHolidaysCache && calNationalHolidaysCache[key] && calNationalHolidaysCache[key].length > 0;
 
-    if (calEventsList) {
-        calEventsList.innerHTML = '';
-        let key = `${monthNum}-${dayNumber}`;
-        let events = (typeof specialObservances !== 'undefined') ? specialObservances[key] : null;
-
-        let startDelay = isPanelAlreadyOpen ? 0 : 1.5;
-
-        if (events && events.length > 0) {
-            events.forEach((evt, idx) => {
-                let div = document.createElement('div');
-                div.classList.add('event-item');
-                let itemDelay = startDelay + (idx * 1.0);
-                div.style.animationDelay = `${itemDelay}s`;
-
-                let eventName = (typeof evt === 'object' && evt.name) ? evt.name : evt;
-                let isOfficial = (typeof evt === 'object' && evt.official);
-                let iconSrc = isOfficial ? 'assets/icons/icons8-check-32.png' : 'assets/icons/icons8-question-32.png';
-                let iconTitle = isOfficial ? 'Official Observance' : 'Unofficial Observance';
-
-                div.innerHTML = `
-                    <div class="event-text-wrapper">
-                        <div class="event-text-track">
-                            <span>${eventName}</span>
-                        </div>
-                    </div>
-                    <div class="event-badge" title="${iconTitle}">
-                        <img src="${iconSrc}">
-                    </div>
-                `;
-
-                calEventsList.appendChild(div);
-
-                let wrapper = div.querySelector('.event-text-wrapper');
-                let track = div.querySelector('.event-text-track');
-                createEventMarquee(wrapper, track, eventName, idx, itemDelay);
-            });
+        if (hasCustom && hasCustom.length > 0) {
+            calCurrentView = CAL_VIEW_SPECIAL_DAYS;
+        } else if (hasNational) {
+            calCurrentView = CAL_VIEW_CALENDARS;
         } else {
-            let div = document.createElement('div');
-            div.classList.add('event-item', 'no-event');
-            div.style.animationDelay = `${startDelay}s`;
-            div.innerHTML = 'No Special Observances';
-            calEventsList.appendChild(div);
+            calCurrentView = CAL_VIEW_OBSERVANCES;
         }
     }
+
+    renderCurrentViewContent(isPanelAlreadyOpen);
 }
 
 
@@ -225,19 +521,120 @@ function isLeftPanelOpen() {
     return calPanelLeft && !calPanelLeft.classList.contains('hide-panel');
 }
 
+function openRightPanel() {
+    if (!calPanelRight || calIsContentLoading) return;
+    calIsRightPanelOpen = true;
+    calPanelRight.classList.remove('hide-panel');
+
+    if (calPanelLeft) {
+        calPanelLeft.classList.add('rail-only');
+        calPanelLeft.classList.remove('hide-panel');
+    }
+    if (calRail) {
+        calRail.classList.add('rail-visible');
+    }
+    if (calCloseBtn) {
+        calCloseBtn.innerHTML = '&lt;';
+    }
+    updateScrollButtonsVisibility();
+}
+
+function closeRightPanel() {
+    if (!calPanelRight) return;
+    calIsRightPanelOpen = false;
+    calPanelRight.classList.add('hide-panel');
+
+    if (calPanelLeft && calPanelLeft.classList.contains('rail-only')) {
+        calPanelLeft.classList.remove('rail-only');
+    }
+    if (calCloseBtn) {
+        calCloseBtn.innerHTML = '&gt;';
+    }
+    setTimeout(updateScrollButtonsVisibility, 300);
+}
+
+function closeBothPanels(force = false) {
+    if (calIsPanelAnimating && !force) return;
+    calIsPanelAnimating = true;
+    if (calBtnTimeout) clearTimeout(calBtnTimeout);
+
+    stopEventMarquees();
+
+    if (calContentLoadTimeout) {
+        clearTimeout(calContentLoadTimeout);
+        calContentLoadTimeout = null;
+    }
+    calIsContentLoading = false;
+    calPendingClose = false;
+
+    if (calCloseBtn) {
+        calCloseBtn.innerHTML = '&lt;';
+        calCloseBtn.classList.remove('controls-locked');
+    }
+
+    if (calPanelTop) {
+        calPanelTop.classList.add('hide-top-info');
+    }
+
+    if (calPanelRight) {
+        calIsRightPanelOpen = false;
+        calPanelRight.classList.add('hide-panel');
+    }
+
+    if (calPanelLeft) {
+        calPanelLeft.classList.remove('rail-only');
+        calPanelLeft.classList.add('hide-panel');
+    }
+
+    if (calSelectedDayElement) {
+        let prevDay = calSelectedDayElement.getAttribute('data-day');
+        if (prevDay) {
+            calSelectedDayElement.innerHTML = prevDay;
+        }
+        calSelectedDayElement.classList.remove('selected-day');
+        calSelectedDayElement = null;
+    }
+
+    if (calScrollUp) calScrollUp.classList.add('hidden');
+    if (calScrollDown) calScrollDown.classList.add('hidden');
+
+    calBtnTimeout = setTimeout(() => {
+        if (calRail) {
+            calRail.classList.remove('rail-visible');
+        }
+        if (calTimeDisplayBottom) {
+            calTimeDisplayBottom.classList.remove('hide-time');
+        }
+        calIsPanelAnimating = false;
+    }, 1200);
+}
+
 if (calCloseBtn) {
     calCloseBtn.addEventListener('click', (evt) => {
         evt.stopPropagation();
-        closeLeftPanel();
+        if (calIsContentLoading || calIsPanelAnimating) return;
+
+        if (calIsRightPanelOpen) {
+            closeRightPanel();
+        } else {
+            closeLeftPanel();
+        }
     });
 }
 
 function closeLeftPanel(force = false) {
+    if (calIsContentLoading && !force) {
+        calPendingClose = true;
+        return;
+    }
+
     if (calIsPanelAnimating && !force) return;
     if (calPanelLeft && calPanelLeft.classList.contains('hide-panel')) return;
 
     calIsPanelAnimating = true;
     if (calBtnTimeout) clearTimeout(calBtnTimeout);
+
+    closeRightPanel();
 
     let eventItems = calEventsList ? calEventsList.querySelectorAll('.event-item') : [];
 
@@ -261,6 +658,7 @@ function closeLeftPanel(force = false) {
 
         if (calCloseBtn) {
             calCloseBtn.innerHTML = '&lt;';
+            calCloseBtn.classList.remove('controls-locked');
         }
 
         if (calPanelTop) {
@@ -268,31 +666,41 @@ function closeLeftPanel(force = false) {
         }
 
         if (calPanelLeft) {
+            calPanelLeft.classList.remove('rail-only');
             calPanelLeft.classList.add('hide-panel');
         }
 
         if (calSelectedDayElement) {
+            let prevDay = calSelectedDayElement.getAttribute('data-day');
+            if (prevDay) {
+                calSelectedDayElement.innerHTML = prevDay;
+            }
             calSelectedDayElement.classList.remove('selected-day');
             calSelectedDayElement = null;
         }
 
+        if (calScrollUp) calScrollUp.classList.add('hidden');
+        if (calScrollDown) calScrollDown.classList.add('hidden');
+
         calBtnTimeout = setTimeout(() => {
-            if (calCloseBtn) {
-                calCloseBtn.classList.remove('btn-visible');
+            if (calRail) {
+                calRail.classList.remove('rail-visible');
             }
             if (calTimeDisplayBottom) {
                 calTimeDisplayBottom.classList.remove('hide-time');
             }
             calIsPanelAnimating = false;
-        }, 1500);
+        }, 1200);
     }
 }
 
 function openLeftPanel(dayNumber, dateObj) {
+    if (pageSelectorNav && !pageSelectorNav.classList.contains('at-end')) return;
+
     let wasOpen = isLeftPanelOpen();
     updateLeftPanelData(dayNumber, dateObj, wasOpen);
 
-    if (wasOpen) {
+    if (wasOpen && !calIsRightPanelOpen) {
         return;
     }
 
@@ -300,6 +708,8 @@ function openLeftPanel(dayNumber, dateObj) {
 
     calIsPanelAnimating = true;
     if (calBtnTimeout) clearTimeout(calBtnTimeout);
+
+    closeRightPanel();
 
     if (calTimeDisplayBottom) {
         calTimeDisplayBottom.classList.add('hide-time');
@@ -311,24 +721,28 @@ function openLeftPanel(dayNumber, dateObj) {
 
     if (calCloseBtn) {
         calCloseBtn.innerHTML = '&gt;';
-        calCloseBtn.classList.remove('btn-visible');
+    }
+
+    if (calRail) {
+        calRail.classList.remove('rail-visible');
     }
 
     if (calPanelLeft) {
+        calPanelLeft.classList.remove('rail-only');
         calPanelLeft.classList.remove('hide-panel');
     }
 
     calBtnTimeout = setTimeout(() => {
         if (isLeftPanelOpen()) {
-            if (calCloseBtn) calCloseBtn.classList.add('btn-visible');
+            if (calRail) calRail.classList.add('rail-visible');
             if (calPanelTop) calPanelTop.classList.remove('hide-top-info');
         }
         calIsPanelAnimating = false;
-    }, 1500);
+    }, 1200);
 }
 
 function triggerMonthChange(delta) {
-    if (calIsYearPickerOpen) return;
+    if (calIsYearPickerOpen || calIsContentLoading) return;
 
     calActiveMonth += delta;
     if (calActiveMonth < 0) {
@@ -349,6 +763,7 @@ function triggerMonthChange(delta) {
 
     calFadeDebounce = setTimeout(() => {
         let wasPanelOpen = isLeftPanelOpen();
+        loadNationalHolidays(calActiveYear);
         renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
 
         if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
@@ -382,6 +797,7 @@ function resetCalendarToCurrentDate() {
         if (calFadeDebounce) clearTimeout(calFadeDebounce);
 
         calFadeDebounce = setTimeout(() => {
+            loadNationalHolidays(calActiveYear);
             renderCalendar();
             if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
             if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -393,21 +809,43 @@ function resetCalendarToCurrentDate() {
 if (pageSelectorNav) {
     pageSelectorNav.querySelectorAll('i').forEach(navBtn => {
         navBtn.addEventListener('click', () => {
-            if (!pageSelectorNav.classList.contains('at-end')) {
-                if (isLeftPanelOpen()) {
-                    closeLeftPanel(true);
+            setTimeout(() => {
+                if (!pageSelectorNav.classList.contains('at-end')) {
+                    if (isLeftPanelOpen() || calIsRightPanelOpen) {
+                        if (calIsContentLoading) {
+                            calPendingClose = true;
+                        } else {
+                            closeBothPanels();
+                            resetCalendarToCurrentDate();
+                        }
+                    } else {
+                        resetCalendarToCurrentDate();
+                    }
+                } else {
+                    if (calPendingClose) {
+                        calPendingClose = false;
+                    }
                 }
-                resetCalendarToCurrentDate();
-            }
+            }, 50);
         });
     });
 
     const pageObserver = new MutationObserver(() => {
         if (!pageSelectorNav.classList.contains('at-end')) {
-            if (isLeftPanelOpen()) {
-                closeLeftPanel(true);
+            if (isLeftPanelOpen() || calIsRightPanelOpen) {
+                if (calIsContentLoading) {
+                    calPendingClose = true;
+                } else {
+                    closeBothPanels();
+                    resetCalendarToCurrentDate();
+                }
+            } else {
+                resetCalendarToCurrentDate();
             }
-            resetCalendarToCurrentDate();
+        } else {
+            if (calPendingClose) {
+                calPendingClose = false;
+            }
         }
     });
 
@@ -470,6 +908,7 @@ function getAutoTargetDay() {
 if (calPrevBtn) {
     calPrevBtn.addEventListener('click', (evt) => {
         evt.stopPropagation();
+        if (calIsContentLoading) return;
         if (calIsYearPickerOpen) {
             calActiveYear--;
             if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
@@ -483,6 +922,7 @@ if (calPrevBtn) {
 if (calNextBtn) {
     calNextBtn.addEventListener('click', (evt) => {
         evt.stopPropagation();
+        if (calIsContentLoading) return;
         if (calIsYearPickerOpen) {
             calActiveYear++;
             if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
@@ -496,6 +936,7 @@ if (calNextBtn) {
 if (calMonthDisplay) {
     calMonthDisplay.addEventListener('click', (evt) => {
         evt.stopPropagation();
+        if (calIsContentLoading) return;
 
         let now = new Date();
         let wasPanelOpen = isLeftPanelOpen();
@@ -514,6 +955,7 @@ if (calMonthDisplay) {
                 if (calFadeDebounce) clearTimeout(calFadeDebounce);
 
                 calFadeDebounce = setTimeout(() => {
+                    loadNationalHolidays(calActiveYear);
                     renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
                     if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
                     if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -529,11 +971,12 @@ if (calMonthDisplay) {
             if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
 
             if (calDaysWrapper) calDaysWrapper.classList.add('fading');
-            if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
+            if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
 
             if (calFadeDebounce) clearTimeout(calFadeDebounce);
 
             calFadeDebounce = setTimeout(() => {
+                loadNationalHolidays(calActiveYear);
                 renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
                 if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
                 if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -547,7 +990,7 @@ if (calYearDisplay) {
     calYearDisplay.innerHTML = calActiveYear;
     calYearDisplay.addEventListener('click', (evt) => {
         evt.stopPropagation();
-        if (calIsTransitioning) return;
+        if (calIsTransitioning || calIsContentLoading) return;
 
         if (isLeftPanelOpen()) {
             closeLeftPanel(true);
@@ -555,6 +998,8 @@ if (calYearDisplay) {
         toggleYearPicker(!calIsYearPickerOpen);
     });
 }
+
+loadNationalHolidays(calActiveYear);
 
 
 /* ==========================================================================
@@ -694,6 +1139,7 @@ function renderCalendar(autoSelectDay = null) {
         let e = document.createElement('div');
         e.classList.add('valid-day');
         e.innerHTML = day;
+        e.setAttribute('data-day', day);
 
         if (isCurrentMonth && day === todayDate) {
             e.classList.add('current-day');
@@ -701,23 +1147,44 @@ function renderCalendar(autoSelectDay = null) {
 
         if (autoSelectDay && day === autoSelectDay) {
             if (calSelectedDayElement) {
+                let prevDay = calSelectedDayElement.getAttribute('data-day');
+                if (prevDay) calSelectedDayElement.innerHTML = prevDay;
                 calSelectedDayElement.classList.remove('selected-day');
             }
             calSelectedDayElement = e;
             e.classList.add('selected-day');
+            e.innerHTML = `<img src="assets/icons/icons8-pencil-32.png" class="cal-day-pencil-icon" alt="Edit">`;
             let selectedDateObj = new Date(calActiveYear, calActiveMonth, day);
             openLeftPanel(day, selectedDateObj);
         }
 
         e.addEventListener('click', (evt) => {
             evt.stopPropagation();
-            if (calIsTransitioning || calIsPanelAnimating || calIsYearPickerOpen) return;
+            if (pageSelectorNav && !pageSelectorNav.classList.contains('at-end')) return;
+            if (calIsTransitioning || calIsPanelAnimating || calIsYearPickerOpen || calIsContentLoading) return;
+
+            if (calSelectedDayElement === e) {
+                if (calIsRightPanelOpen) {
+                    closeRightPanel();
+                } else {
+                    openRightPanel();
+                }
+                return;
+            }
 
             if (calSelectedDayElement) {
+                let prevDay = calSelectedDayElement.getAttribute('data-day');
+                if (prevDay) {
+                    calSelectedDayElement.innerHTML = prevDay;
+                }
                 calSelectedDayElement.classList.remove('selected-day');
             }
+
             calSelectedDayElement = e;
             e.classList.add('selected-day');
+            e.innerHTML = `<img src="assets/icons/icons8-pencil-32.png" class="cal-day-pencil-icon" alt="Edit">`;
+
+            closeRightPanel();
 
             let selectedDateObj = new Date(calActiveYear, calActiveMonth, day);
             openLeftPanel(day, selectedDateObj);

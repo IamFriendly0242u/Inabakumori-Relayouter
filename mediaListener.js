@@ -47,7 +47,19 @@ let isPlayingOtherMedia = false;
 let randomizeSongs = true;
 
 let isGifIconEnabled = false;
+let userGifPreference = false;
 let gifStateBackup = false;
+
+let isVisualizerEnabled = true;
+window.isVisualizerEnabled = true;
+
+let isCrossfadeEnabled = false;
+let crossfadeStateBackup = false;
+let crossfadeDuration = 5;
+let isCrossfading = false;
+let crossfadeInterval = null;
+let fadingAudioInstance = null;
+let isExpandAnimating = false;
 
 let sliderUiFrame = null;
 let isSeekingAnimation = false;
@@ -63,13 +75,18 @@ let countdownInterval = null;
 let isKeepPaused = false;
 let is3sLockPhase = false;
 
+let autoScrollSettingsRaf = null;
+let autoScrollSettingsTimeout = null;
+
 function startFirstLoadCountdown() {
-    if (!isFirstLoadPending) return;
+    if (!window.hasMediaRevealed) return;
+    if (!isFirstLoadPending || isKeepPaused) return;
 
     if (timerText) timerText.textContent = countdownValue;
-    if (timerMenu) timerMenu.classList.remove('hide-timer');
+    if (timerMenu && !isAppsConnectPlaying()) timerMenu.classList.remove('hide-timer');
 
-    clearInterval(countdownInterval);
+    if (countdownInterval !== null) return;
+
     countdownInterval = setInterval(() => {
         countdownValue--;
 
@@ -115,7 +132,7 @@ function finishFirstLoadCountdown() {
 
 if (timerMenu) {
     timerMenu.addEventListener('mouseenter', () => {
-        if (isFirstLoadPending && !is3sLockPhase && timerTooltip) {
+        if (isFirstLoadPending && !is3sLockPhase && timerTooltip && !isAppsConnectPlaying()) {
             timerTooltip.classList.remove('hide-tooltip');
         }
     });
@@ -131,6 +148,11 @@ if (timerMenu) {
         if (isFirstLoadPending && !is3sLockPhase) {
             isKeepPaused = true;
             is3sLockPhase = true;
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
 
             if (timerTooltip) {
                 timerTooltip.classList.add('hide-tooltip');
@@ -154,6 +176,17 @@ if (timerMenu) {
                 if (timerText) {
                     timerText.textContent = countdownValue;
                 }
+
+                if (countdownInterval) clearInterval(countdownInterval);
+
+                countdownInterval = setInterval(() => {
+                    countdownValue--;
+                    if (timerText) timerText.textContent = countdownValue;
+
+                    if (countdownValue <= 0) {
+                        finishFirstLoadCountdown();
+                    }
+                }, 1000);
             }, delayBefore3s);
         }
     });
@@ -184,23 +217,49 @@ const songGifs = {
 function getHDThumbnail(url) {
     if (!url) return "assets/icons/inaba_512.png";
 
-    if (url.includes('ytimg.com')) {
-        return url.replace(/\/(hqdefault|mqdefault|sddefault|default)\.jpg/i, '/maxresdefault.jpg');
+    let cleanUrl = url.split('?')[0];
+
+    if (cleanUrl.includes('ytimg.com')) {
+        return cleanUrl.replace(/\/(hqdefault|mqdefault|sddefault|default|hq720)\.(jpg|webp)/i, '/maxresdefault.jpg');
     }
 
-    if (url.includes('ggpht.com') || url.includes('googleusercontent.com')) {
-        return url
-            .replace(/=w\d+-h\d+/g, '=w1000-h1000')
-            .replace(/=s\d+/g, '=s1000');
+    if (cleanUrl.includes('ggpht.com') || cleanUrl.includes('googleusercontent.com')) {
+        return cleanUrl.replace(/=[^=]+$/, '=s1200');
     }
 
     return url;
+}
+
+function resolveAlbumDisplay(album, title) {
+    if (!album || !album.trim()) {
+        return "Single Track";
+    }
+
+    let a = album.trim();
+    let t = (title || "").trim();
+
+    let cleanA = a.toLowerCase().replace(/[\(\[\{【『].*?[\)\]\}】』]/g, '').trim();
+    let cleanT = t.toLowerCase().replace(/[\(\[\{【『].*?[\)\]\}】』]/g, '').trim();
+
+    if (!cleanA || cleanA === cleanT || a.toLowerCase() === t.toLowerCase() || /^(single|single track|single-track)$/i.test(a)) {
+        return "Single Track";
+    }
+
+    return a;
 }
 
 function updateSliderFill(percent) {
     if (!slider) return;
     const safePercent = Math.max(0, Math.min(100, percent || 0));
     slider.style.background = `linear-gradient(to right, #ffffff ${safePercent}%, #000000 ${safePercent}%)`;
+}
+
+function updateCrossfadeSliderFill(value) {
+    const sliderEl = document.getElementById("crossfade-slider");
+    if (!sliderEl) return;
+    const percent = ((value - 1) / 9) * 100;
+    const safePercent = Math.max(0, Math.min(100, percent));
+    sliderEl.style.background = `linear-gradient(to right, #ffffff ${safePercent}%, #000000 ${safePercent}%)`;
 }
 
 
@@ -215,6 +274,10 @@ let syncedLyricsMemory = [];
 let lastTrackKey = "";
 let lastCurrentLyricText = "";
 let isLyricAnimating = false;
+let lyricMarqueeRaf = null;
+let lyricMarqueeTimeout = null;
+
+const LYRICS_TIME_OFFSET_SEC = 0.35;
 
 let autoScrollRaf = null;
 let autoScrollTimeout = null;
@@ -239,48 +302,55 @@ function isAppsConnectPlaying() {
         systemMediaData.title !== "Unknown Title";
 }
 
-function getCleanAppName(appId, coverUrl, albumName, titleName) {
-    let cleanApp = (appId || "").replace(/\.exe$/i, '').trim().toLowerCase();
-    let cleanCover = (coverUrl || "").toLowerCase();
-    let cleanAlbum = (albumName || "").toLowerCase();
-    let cleanTitle = (titleName || "").toLowerCase();
+function isYouTubeMedia(coverUrl, appId, title, album) {
+    let c = (coverUrl || "").toLowerCase();
+    let app = (appId || "").toLowerCase();
+    let t = (title || "").toLowerCase();
+    let a = (album || "").toLowerCase();
 
-    if (cleanApp.includes("youtube") ||
-        cleanCover.includes("ytimg") ||
-        cleanCover.includes("ggpht") ||
-        cleanCover.includes("googleusercontent") ||
-        cleanAlbum.includes("youtube") ||
-        cleanTitle.includes("youtube")) {
-        return "YouTube";
+    return c.includes("ytimg.com") ||
+        c.includes("ggpht.com") ||
+        c.includes("googleusercontent.com") ||
+        c.includes("youtube.com") ||
+        app.includes("youtube") ||
+        app.includes("chrome") ||
+        app.includes("edge") ||
+        app.includes("brave") ||
+        app.includes("firefox") ||
+        app.includes("opera") ||
+        t.includes("youtube") ||
+        a.includes("youtube");
+}
+
+function isSpotifyMedia(coverUrl, appId) {
+    let c = (coverUrl || "").toLowerCase();
+    let app = (appId || "").toLowerCase();
+
+    if (app.includes("spotify") || c.includes("scdn.co") || c.includes("spotify")) {
+        return true;
     }
 
-    if (cleanApp.includes("chrome")) return "Chrome";
-    if (cleanApp.includes("edge") || cleanApp.includes("msedge")) return "Edge";
-    if (cleanApp.includes("firefox")) return "Firefox";
-    if (cleanApp.includes("brave")) return "Brave";
-    if (cleanApp.includes("opera")) return "Opera";
-    if (cleanApp.includes("vlc")) return "VLC";
-
-    if (cleanApp.includes("spotify") ||
-        cleanCover.includes("spotify") ||
-        cleanCover.includes("scdn.co") ||
-        cleanAlbum.includes("spotify")) {
-        return "Spotify";
+    if (!isYouTubeMedia(coverUrl, appId, "", "") && (c.startsWith("data:image") || c.includes("blob:"))) {
+        return true;
     }
 
-    if (!cleanApp) {
-        return "APPs Connect";
-    }
+    return false;
+}
 
-    return cleanApp.charAt(0).toUpperCase() + cleanApp.slice(1);
+function getCleanAppName() {
+    return "APPs Connect";
 }
 
 if (window.wallpaperRegisterMediaPropertiesListener) {
     window.wallpaperRegisterMediaPropertiesListener((event) => {
-        systemMediaData.title = event.title || "Unknown Title";
-        systemMediaData.artist = event.artist || "Unknown Artist";
-        systemMediaData.album = event.subTitle || event.albumTitle || "Single Track";
+        let newTitle = event.title || "Unknown Title";
+        let newArtist = event.artist || "Unknown Artist";
+        let rawAlbum = event.subTitle || event.albumTitle || "";
+
+        systemMediaData.title = newTitle;
+        systemMediaData.artist = newArtist;
         systemMediaData.appId = (event.appId || "").toLowerCase();
+        systemMediaData.album = resolveAlbumDisplay(rawAlbum, newTitle);
 
         if (isAppsConnectPlaying()) {
             updateSystemMediaPlayer();
@@ -301,12 +371,15 @@ if (window.wallpaperRegisterMediaThumbnailListener) {
             if (infoCover) {
                 infoCover.style.backgroundImage = `url("${systemMediaData.cover}")`;
             }
-            yearDisplay.textContent = getCleanAppName(
-                systemMediaData.appId,
-                systemMediaData.cover,
-                systemMediaData.album,
-                systemMediaData.title
-            );
+            yearDisplay.textContent = getCleanAppName();
+
+            if (isSpotifyMedia(systemMediaData.cover, systemMediaData.appId)) {
+                fetchSyncedLyrics(systemMediaData.title, systemMediaData.artist);
+            } else {
+                stopLyricMarquee();
+                updateLyricUI("", "");
+                lastTrackKey = "";
+            }
         }
     });
 }
@@ -344,12 +417,27 @@ function updateAppsUIState() {
     if (mediaWrapper) {
         if (isActive) {
             mediaWrapper.classList.add('apps-active', 'spotify-active');
+            if (timerTooltip) timerTooltip.classList.add('hide-tooltip');
             if (slider) slider.style.pointerEvents = 'none';
+
+            if (isFirstLoadPending) {
+                if (timerMenu) timerMenu.classList.add('hide-timer');
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+            }
         } else {
             mediaWrapper.classList.remove('apps-active', 'spotify-active');
             if (slider) slider.style.pointerEvents = 'auto';
+            stopLyricMarquee();
             updateLyricUI("", "");
             lastTrackKey = "";
+
+            if (isFirstLoadPending && window.hasMediaRevealed) {
+                if (timerMenu) timerMenu.classList.remove('hide-timer');
+                startFirstLoadCountdown();
+            }
         }
     }
 }
@@ -363,23 +451,33 @@ function parseLRC(lrcText) {
     for (let line of lines) {
         const match = line.match(regex);
         if (match) {
-            const minutes = parseInt(match[1]);
-            const seconds = parseInt(match[2]);
-            const milliseconds = parseInt(match[3]);
+            const minutes = parseInt(match[1], 10);
+            const seconds = parseInt(match[2], 10);
+            const milliseconds = parseInt(match[3], 10);
             const time = minutes * 60 + seconds + (milliseconds > 99 ? milliseconds / 1000 : milliseconds / 100);
             const text = match[4].trim();
-            result.push({ time, text });
+            if (text) {
+                result.push({ time, text });
+            }
         }
     }
     return result.sort((a, b) => a.time - b.time);
 }
 
 function fetchSyncedLyrics(title, artist) {
+    if (!isSpotifyMedia(systemMediaData.cover, systemMediaData.appId) || !systemMediaData.isPlaying) {
+        stopLyricMarquee();
+        updateLyricUI("", "");
+        lastTrackKey = "";
+        return;
+    }
+
     const trackKey = `${title}-${artist}`;
     if (lastTrackKey === trackKey) return;
     lastTrackKey = trackKey;
 
     syncedLyricsMemory = [];
+    stopLyricMarquee();
     updateLyricUI("Searching lyrics...", "");
 
     const cleanTitle = encodeURIComponent(title.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim());
@@ -391,6 +489,11 @@ function fetchSyncedLyrics(title, artist) {
             return res.json();
         })
         .then(data => {
+            if (!isSpotifyMedia(systemMediaData.cover, systemMediaData.appId) || !systemMediaData.isPlaying) {
+                stopLyricMarquee();
+                updateLyricUI("", "");
+                return;
+            }
             if (data && data.syncedLyrics) {
                 syncedLyricsMemory = parseLRC(data.syncedLyrics);
                 updateLyricUI("♪ " + title, "Enjoy the music!");
@@ -399,8 +502,93 @@ function fetchSyncedLyrics(title, artist) {
             }
         })
         .catch(() => {
+            if (!isSpotifyMedia(systemMediaData.cover, systemMediaData.appId) || !systemMediaData.isPlaying) {
+                stopLyricMarquee();
+                updateLyricUI("", "");
+                return;
+            }
             updateLyricUI("♪ Lyrics unavailable", "");
         });
+}
+
+function stopLyricMarquee() {
+    if (lyricMarqueeRaf) {
+        cancelAnimationFrame(lyricMarqueeRaf);
+        lyricMarqueeRaf = null;
+    }
+    if (lyricMarqueeTimeout) {
+        clearTimeout(lyricMarqueeTimeout);
+        lyricMarqueeTimeout = null;
+    }
+    const currentEl = document.getElementById("media-lyric-current");
+    if (currentEl) {
+        currentEl.style.transform = "translateX(0px)";
+    }
+}
+
+function checkAndStartLyricMarquee(currentEl, text) {
+    stopLyricMarquee();
+    if (!currentEl) return;
+
+    currentEl.style.transform = "translateX(0px)";
+    currentEl.textContent = text;
+
+    setTimeout(() => {
+        if (!currentEl) return;
+        const containerWidth = currentEl.parentElement ? currentEl.parentElement.clientWidth : 0;
+        const textWidth = currentEl.scrollWidth;
+        const overflow = textWidth - containerWidth;
+
+        if (overflow > 4) {
+            const SPEED_PX_SEC = 25;
+            const scrollDuration = Math.max(1200, (overflow / SPEED_PX_SEC) * 1000);
+            const PAUSE_DURATION = 1200;
+
+            let state = "WAIT_START";
+            let startTime = null;
+
+            lyricMarqueeTimeout = setTimeout(() => {
+                state = "SCROLL_LEFT";
+                startTime = performance.now();
+
+                function step(now) {
+                    if (!currentEl) return;
+
+                    if (state === "SCROLL_LEFT") {
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / scrollDuration, 1);
+                        currentEl.style.transform = `translateX(${-progress * overflow}px)`;
+
+                        if (progress >= 1) {
+                            state = "WAIT_END";
+                            lyricMarqueeTimeout = setTimeout(() => {
+                                state = "SCROLL_RIGHT";
+                                startTime = performance.now();
+                                lyricMarqueeRaf = requestAnimationFrame(step);
+                            }, PAUSE_DURATION);
+                            return;
+                        }
+                    } else if (state === "SCROLL_RIGHT") {
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / scrollDuration, 1);
+                        currentEl.style.transform = `translateX(${-(1 - progress) * overflow}px)`;
+
+                        if (progress >= 1) {
+                            state = "WAIT_START";
+                            lyricMarqueeTimeout = setTimeout(() => {
+                                state = "SCROLL_LEFT";
+                                startTime = performance.now();
+                                lyricMarqueeRaf = requestAnimationFrame(step);
+                            }, PAUSE_DURATION);
+                            return;
+                        }
+                    }
+                    lyricMarqueeRaf = requestAnimationFrame(step);
+                }
+                lyricMarqueeRaf = requestAnimationFrame(step);
+            }, PAUSE_DURATION);
+        }
+    }, 50);
 }
 
 function updateLyricUI(currentText, nextText) {
@@ -410,7 +598,16 @@ function updateLyricUI(currentText, nextText) {
 
     if (!wrapper || !currentEl || !nextEl) return;
 
-    if (!currentEl.textContent || currentText === "Searching lyrics..." || currentText.startsWith("♪ ")) {
+    if (!currentText) {
+        stopLyricMarquee();
+        currentEl.textContent = "";
+        nextEl.textContent = "";
+        lastCurrentLyricText = "";
+        return;
+    }
+
+    if (currentText === "Searching lyrics..." || currentText.startsWith("♪ ")) {
+        stopLyricMarquee();
         currentEl.textContent = currentText;
         nextEl.textContent = nextText;
         lastCurrentLyricText = currentText;
@@ -425,14 +622,14 @@ function updateLyricUI(currentText, nextText) {
 
         setTimeout(() => {
             wrapper.style.transition = "none";
-            currentEl.textContent = currentText;
+            checkAndStartLyricMarquee(currentEl, currentText);
             nextEl.textContent = nextText;
             wrapper.classList.remove("slide-up");
 
             void wrapper.offsetWidth;
             wrapper.style.transition = "";
             isLyricAnimating = false;
-        }, 350);
+        }, 180);
     }
 }
 
@@ -458,9 +655,11 @@ function startAppsTimer() {
                 }
 
                 if (syncedLyricsMemory.length > 0) {
+                    let compensatedPos = currentPos + LYRICS_TIME_OFFSET_SEC;
                     let currentIndex = -1;
+
                     for (let i = 0; i < syncedLyricsMemory.length; i++) {
-                        if (currentPos >= syncedLyricsMemory[i].time) {
+                        if (compensatedPos >= syncedLyricsMemory[i].time) {
                             currentIndex = i;
                         } else {
                             break;
@@ -477,7 +676,7 @@ function startAppsTimer() {
         } else {
             stopAppsTimer();
         }
-    }, 150);
+    }, 40);
 }
 
 function stopAppsTimer() {
@@ -498,18 +697,25 @@ function updateSystemMediaPlayer() {
     }
     setScrollingArtist(artist);
 
-    yearDisplay.textContent = getCleanAppName(
-        systemMediaData.appId,
-        systemMediaData.cover,
-        systemMediaData.album,
-        systemMediaData.title
-    );
+    yearDisplay.textContent = getCleanAppName();
     imageDisplay.style.backgroundImage = `url("${systemMediaData.cover}")`;
 
     updatePlayPauseUI(systemMediaData.isPlaying);
 
+    let isSpotify = isSpotifyMedia(systemMediaData.cover, systemMediaData.appId);
+
     if (isAppsConnectPlaying() && systemMediaData.title) {
-        fetchSyncedLyrics(systemMediaData.title, systemMediaData.artist);
+        if (isSpotify) {
+            fetchSyncedLyrics(systemMediaData.title, systemMediaData.artist);
+        } else {
+            stopLyricMarquee();
+            updateLyricUI("", "");
+            lastTrackKey = "";
+        }
+    } else {
+        stopLyricMarquee();
+        updateLyricUI("", "");
+        lastTrackKey = "";
     }
 
     const infoTitle = document.getElementById("info-title");
@@ -517,7 +723,7 @@ function updateSystemMediaPlayer() {
     const infoCover = document.getElementById("info-cover");
 
     if (infoTitle) infoTitle.textContent = systemMediaData.title;
-    if (infoArtist) infoArtist.textContent = systemMediaData.artist;
+    if (infoArtist) infoArtist.textContent = artist;
     if (infoCover) infoCover.style.backgroundImage = `url("${systemMediaData.cover}")`;
 }
 
@@ -668,6 +874,101 @@ function startAutoScrollInfo() {
     }, 300);
 }
 
+function stopAutoScrollSettings() {
+    if (autoScrollSettingsRaf) {
+        cancelAnimationFrame(autoScrollSettingsRaf);
+        autoScrollSettingsRaf = null;
+    }
+    if (autoScrollSettingsTimeout) {
+        clearTimeout(autoScrollSettingsTimeout);
+        autoScrollSettingsTimeout = null;
+    }
+    const container = document.querySelector("#settings-panel .info-section");
+    if (container) {
+        container.scrollTop = 0;
+    }
+}
+
+function startAutoScrollSettings(immediate = false) {
+    if (autoScrollSettingsRaf) {
+        cancelAnimationFrame(autoScrollSettingsRaf);
+        autoScrollSettingsRaf = null;
+    }
+    if (autoScrollSettingsTimeout) {
+        clearTimeout(autoScrollSettingsTimeout);
+        autoScrollSettingsTimeout = null;
+    }
+
+    const container = document.querySelector("#settings-panel .info-section");
+    if (!container) return;
+
+    const delay = immediate ? 100 : 800;
+
+    autoScrollSettingsTimeout = setTimeout(() => {
+        const maxScroll = container.scrollHeight - container.clientHeight;
+        if (maxScroll <= 2) {
+            container.scrollTop = 0;
+            return;
+        }
+
+        const SPEED_PX_PER_SEC = 20;
+        const scrollDuration = Math.max(3000, (maxScroll / SPEED_PX_PER_SEC) * 1000);
+        const PAUSE_DURATION = 3000;
+
+        let state = "WAIT_TOP";
+        let startTime = null;
+
+        autoScrollTimeout = setTimeout(() => {
+            state = "SCROLL_DOWN";
+            startTime = performance.now();
+
+            function step(now) {
+                if (!container) return;
+
+                const currentMaxScroll = container.scrollHeight - container.clientHeight;
+                if (currentMaxScroll <= 2) {
+                    container.scrollTop = 0;
+                    return;
+                }
+
+                if (state === "SCROLL_DOWN") {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / scrollDuration, 1);
+                    container.scrollTop = progress * currentMaxScroll;
+
+                    if (progress >= 1) {
+                        state = "WAIT_BOTTOM";
+                        autoScrollSettingsTimeout = setTimeout(() => {
+                            state = "SCROLL_UP";
+                            startTime = performance.now();
+                            autoScrollSettingsRaf = requestAnimationFrame(step);
+                        }, PAUSE_DURATION);
+                        return;
+                    }
+                } else if (state === "SCROLL_UP") {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / scrollDuration, 1);
+                    container.scrollTop = (1 - progress) * currentMaxScroll;
+
+                    if (progress >= 1) {
+                        state = "WAIT_TOP";
+                        autoScrollSettingsTimeout = setTimeout(() => {
+                            state = "SCROLL_DOWN";
+                            startTime = performance.now();
+                            autoScrollSettingsRaf = requestAnimationFrame(step);
+                        }, PAUSE_DURATION);
+                        return;
+                    }
+                }
+
+                autoScrollSettingsRaf = requestAnimationFrame(step);
+            }
+
+            autoScrollSettingsRaf = requestAnimationFrame(step);
+        }, PAUSE_DURATION);
+    }, delay);
+}
+
 repeatButton.addEventListener("click", () => {
     if (isAppsConnectPlaying()) return;
 
@@ -693,6 +994,7 @@ infoButton.addEventListener("click", () => {
 
     if (mediaContainer.classList.contains("settings-open")) {
         mediaContainer.classList.remove("settings-open");
+        stopAutoScrollSettings();
         needsDelay = true;
     }
 
@@ -837,6 +1139,7 @@ switchMenu.addEventListener("click", () => {
 
     if (mediaContainer.classList.contains("settings-open")) {
         mediaContainer.classList.remove("settings-open");
+        stopAutoScrollSettings();
         needsDelay = true;
     }
 
@@ -852,6 +1155,7 @@ switchMenu.addEventListener("click", () => {
 settingsMenu.addEventListener("click", () => {
     if (mediaContainer.classList.contains("settings-open")) {
         mediaContainer.classList.remove("settings-open");
+        stopAutoScrollSettings();
         return;
     }
 
@@ -873,10 +1177,12 @@ settingsMenu.addEventListener("click", () => {
         setTimeout(() => {
             mediaContainer.classList.add("settings-open");
             renderSettings();
+            startAutoScrollSettings();
         }, 1100);
     } else {
         mediaContainer.classList.add("settings-open");
         renderSettings();
+        startAutoScrollSettings();
     }
 });
 
@@ -892,28 +1198,60 @@ forwardPage.addEventListener("click", () => {
     switchPage();
 });
 
-playButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying() || is3sLockPhase) return;
+function resetTimerLockAndResume() {
+    isKeepPaused = false;
+    is3sLockPhase = false;
+    isFirstLoadPending = false;
 
-    if (isFirstLoadPending) {
-        finishFirstLoadCountdown();
-    } else {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+
+    if (timerTooltip) {
+        timerTooltip.classList.add('hide-tooltip');
+    }
+
+    if (timerMenu) {
+        timerMenu.classList.add('hide-timer');
+    }
+
+    if (mediaButtons) {
+        mediaButtons.classList.remove('controls-locked');
+    }
+
+    if (switchMenu) {
+        switchMenu.classList.remove('controls-locked');
+    }
+}
+
+playButton.addEventListener("click", () => {
+    if (isAppsConnectPlaying()) return;
+
+    resetTimerLockAndResume();
+    if (currentSong) {
         startSong(currentSong);
     }
 });
 
 pauseButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying() || is3sLockPhase) return;
+    if (isAppsConnectPlaying()) return;
+
+    resetTimerLockAndResume();
     stopSong();
 });
 
 nextButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying() || is3sLockPhase) return;
+    if (isAppsConnectPlaying()) return;
+
+    resetTimerLockAndResume();
     loadNextSong();
 });
 
 previousButton.addEventListener("click", () => {
-    if (isAppsConnectPlaying() || is3sLockPhase) return;
+    if (isAppsConnectPlaying()) return;
+
+    resetTimerLockAndResume();
     loadPreviousSong();
 });
 
@@ -945,10 +1283,11 @@ function pageLoad() {
     loadAudio("assets/musics/" + randomSong)
         .then(songProperties => {
             currentSong = { ...songProperties };
-            currentSong.audio.addEventListener("loadedmetadata", () => {
+
+            const handleInitialMetadata = () => {
                 stopSong();
 
-                if (isFirstLoadPending) {
+                if (isFirstLoadPending && !isKeepPaused && window.hasMediaRevealed) {
                     startFirstLoadCountdown();
                 }
 
@@ -962,7 +1301,14 @@ function pageLoad() {
                     image,
                     convertSecondsToMinute(currentSong.audio.duration)
                 );
-            });
+            };
+
+            if (currentSong.audio.readyState >= 1) {
+                handleInitialMetadata();
+            } else {
+                currentSong.audio.addEventListener("loadedmetadata", handleInitialMetadata, { once: true });
+            }
+
             currentSong.audio.addEventListener("ended", songOnEndListener);
             currentSong.audio.load();
         })
@@ -978,7 +1324,7 @@ function pageLoad() {
 
 
 /* ==========================================================================
-   8. AUDIO PLAYBACK CORE FUNCTIONS
+   8. AUDIO PLAYBACK CORE & SPOTIFY EQUAL-POWER CROSSFADE SYSTEM
    ========================================================================== */
 
 function updatePlayPauseUI(isPlaying) {
@@ -992,8 +1338,9 @@ function updatePlayPauseUI(isPlaying) {
 }
 
 function songOnClickListener(event) {
-    if (isAppsConnectPlaying() || is3sLockPhase) return;
+    if (isAppsConnectPlaying()) return;
 
+    resetTimerLockAndResume();
     const songElement = event.currentTarget;
     let songPath = songElement.getAttribute("data-song-path");
 
@@ -1003,6 +1350,8 @@ function songOnClickListener(event) {
 }
 
 function songOnEndListener() {
+    if (isCrossfading || isKeepPaused) return;
+
     if (playMode === 2) {
         let startPercent = parseFloat(slider.value) || 100;
         currentSong.audio.currentTime = 0;
@@ -1017,6 +1366,98 @@ function songOnEndListener() {
     }
 
     loadRandomSong();
+}
+
+function triggerCrossfade() {
+    if (isCrossfading || isKeepPaused || !currentSong || !currentSong.audio) return;
+    isCrossfading = true;
+
+    let oldAudio = currentSong.audio;
+    fadingAudioInstance = oldAudio;
+
+    let nextIndex = currentSongIndex;
+    if (playMode === 1) {
+        nextIndex = (currentSongIndex + 1) % songPaths.length;
+    } else if (playMode === 0) {
+        nextIndex = Math.floor(Math.random() * songPaths.length);
+    }
+    currentSongIndex = nextIndex;
+
+    let nextSongPath = "assets/musics/" + songPaths[currentSongIndex];
+
+    const newAudio = new Audio(nextSongPath);
+    newAudio.volume = 0;
+
+    const nextSongProps = {
+        audio: newAudio,
+        tags: {}
+    };
+    currentSong = nextSongProps;
+
+    const songPathStr = songPaths[currentSongIndex];
+
+    const updateMetadataUI = () => {
+        const tags = (currentSong && currentSong.tags) ? currentSong.tags : {};
+        let songDur = convertSecondsToMinute(newAudio.duration);
+        let image = getSongCoverImage(songPathStr, tags);
+        updatePlayer(
+            tags.title || songPathStr.slice(0, -4),
+            tags.album || "Inabakumori Songs",
+            tags.artist || "Inabakumori",
+            tags.year || "",
+            image,
+            songDur
+        );
+    };
+
+    loadAudio(nextSongPath).then(props => {
+        if (currentSong && currentSong.audio === newAudio) {
+            currentSong.tags = props.tags || {};
+            refreshCurrentSongCover();
+            updateMetadataUI();
+        }
+    }).catch(() => {});
+
+    newAudio.addEventListener("ended", songOnEndListener);
+    newAudio.play().then(() => {
+        updatePlayPauseUI(true);
+    }).catch(() => {});
+
+    if (!isNaN(newAudio.duration) && newAudio.duration > 0) {
+        updateMetadataUI();
+    } else {
+        newAudio.addEventListener("loadedmetadata", updateMetadataUI, { once: true });
+    }
+
+    let startTime = performance.now();
+    let durationMs = crossfadeDuration * 1000;
+
+    if (crossfadeInterval) clearInterval(crossfadeInterval);
+
+    crossfadeInterval = setInterval(() => {
+        let elapsed = performance.now() - startTime;
+        let progress = Math.min(elapsed / durationMs, 1);
+
+        let outFactor = Math.cos(progress * 0.5 * Math.PI);
+        let inFactor = Math.sin(progress * 0.5 * Math.PI);
+
+        if (oldAudio) oldAudio.volume = Math.max(0, Math.min(1, volume * outFactor));
+        if (newAudio) newAudio.volume = Math.max(0, Math.min(1, volume * inFactor));
+
+        if (progress >= 1) {
+            clearInterval(crossfadeInterval);
+            crossfadeInterval = null;
+            if (oldAudio) {
+                oldAudio.pause();
+                oldAudio.volume = 0;
+            }
+            if (newAudio) {
+                newAudio.volume = volume;
+            }
+            fadingAudioInstance = null;
+            isCrossfading = false;
+        }
+    }, 20);
 }
 
 function loadRandomSong() {
@@ -1038,6 +1479,16 @@ function loadPreviousSong() {
 }
 
 function loadSong(songPath) {
+    if (crossfadeInterval) {
+        clearInterval(crossfadeInterval);
+        crossfadeInterval = null;
+    }
+    if (fadingAudioInstance) {
+        fadingAudioInstance.pause();
+        fadingAudioInstance = null;
+    }
+    isCrossfading = false;
+
     loadAudio(songPath)
         .then(songProperties => {
             initSong(songProperties);
@@ -1052,20 +1503,17 @@ function initSong(songProperties) {
     clearInterval(songInterval);
 
     currentSong = { ...songProperties };
-
-    currentSong.audio.addEventListener("loadedmetadata", () => {
-        if (!isPlayingOtherMedia && !isAppsConnectPlaying()) {
-            startSong(currentSong);
-        } else {
-            stopSong();
-        }
-    });
-
     currentSong.audio.addEventListener("ended", songOnEndListener);
     currentSong.audio.load();
+
+    if (!isPlayingOtherMedia && !isAppsConnectPlaying() && !isKeepPaused) {
+        startSong(currentSong);
+    }
 }
 
 function startSong(song) {
+    if (isKeepPaused) return;
+
     if (isFirstLoadPending) {
         isFirstLoadPending = false;
         if (countdownInterval) {
@@ -1101,19 +1549,24 @@ function startSong(song) {
 
     const tags = song.tags || {};
     const songPath = songPaths[currentSongIndex];
-
     let image = getSongCoverImage(songPath, tags);
 
-    setTimeout(() => {
+    const updateMetadataUI = () => {
         updatePlayer(
             tags.title || songPath.slice(0, -4),
             tags.album || "Inabakumori Songs",
             tags.artist || "Inabakumori",
             tags.year || "",
             image,
-            convertSecondsToMinute(currentSong.audio.duration)
+            convertSecondsToMinute(song.audio.duration)
         );
-    }, 600);
+    };
+
+    if (!isNaN(song.audio.duration) && song.audio.duration > 0) {
+        updateMetadataUI();
+    } else {
+        song.audio.addEventListener("loadedmetadata", updateMetadataUI, { once: true });
+    }
 
     if (song && song.audio && !isNaN(song.audio.duration)) {
         let targetPercent = (song.audio.currentTime / song.audio.duration) * 100;
@@ -1127,6 +1580,16 @@ function stopSong() {
     if (currentSong && currentSong.audio) {
         currentSong.audio.pause();
     }
+    if (fadingAudioInstance) {
+        fadingAudioInstance.pause();
+        fadingAudioInstance = null;
+    }
+    if (crossfadeInterval) {
+        clearInterval(crossfadeInterval);
+        crossfadeInterval = null;
+    }
+    isCrossfading = false;
+
     if (sliderUiFrame) cancelAnimationFrame(sliderUiFrame);
     isSeekingAnimation = false;
     clearInterval(songInterval);
@@ -1157,13 +1620,21 @@ function moveSongSlider() {
 
     if (!currentSong || !currentSong.audio) return;
     if (isNaN(currentSong.audio.duration)) return;
-    if (isDragging || isSeekingAnimation) return;
 
     const currentTime = currentSong.audio.currentTime;
+    const totalDuration = currentSong.audio.duration;
+    const remainingTime = totalDuration - currentTime;
+
+    if (isCrossfadeEnabled && remainingTime <= crossfadeDuration && remainingTime > 0.5 && !isCrossfading && !isKeepPaused) {
+        triggerCrossfade();
+        return;
+    }
+
+    if (isDragging || isSeekingAnimation) return;
 
     elapsedTime.innerHTML = convertSecondsToMinute(currentTime);
 
-    const progress = (currentTime / currentSong.audio.duration) * 100;
+    const progress = (currentTime / totalDuration) * 100;
     slider.value = progress;
     updateSliderFill(progress);
 }
@@ -1240,6 +1711,21 @@ function switchPage() {
 function toggleMenu() {
     mediaPlaylist.classList.toggle('hide-properties');
     mediaProperties.classList.toggle('hide-properties');
+
+    if (!mediaProperties.classList.contains('hide-properties')) {
+        setTimeout(() => {
+            if (currentSong && currentSong.tags) {
+                const songPath = songPaths[currentSongIndex];
+                setScrollingTitle((currentSong.tags && currentSong.tags.title) || songPath.slice(0, -4));
+                setScrollingAlbum((currentSong.tags && currentSong.tags.album) || "Inabakumori Songs");
+                setScrollingArtist((currentSong.tags && currentSong.tags.artist) || "Inabakumori");
+            }
+        }, 1000);
+    } else {
+        stopPingPongMarquee('title');
+        stopPingPongMarquee('album');
+        stopPingPongMarquee('artist');
+    }
 }
 
 function wallpaperMediaPlaybackListener(event) {
@@ -1285,6 +1771,9 @@ function wallpaperMediaPlaybackListener(event) {
             }
         } else {
             syncStaticPlayPauseUI();
+            if (isKeepPaused) {
+                stopSong();
+            }
         }
     }
 }
@@ -1309,6 +1798,17 @@ function stopPingPongMarquee(handleKey, index = -1) {
         h.raf = null;
         h.timeout = null;
     }
+
+    if (handleKey === 'title') {
+        const el = document.getElementById("media-title-track");
+        if (el) el.style.transform = "translateX(0px)";
+    } else if (handleKey === 'album') {
+        const el = document.getElementById("media-album-track");
+        if (el) el.style.transform = "translateX(0px)";
+    } else if (handleKey === 'artist') {
+        const el = document.getElementById("media-artist-track");
+        if (el) el.style.transform = "translateX(0px)";
+    }
 }
 
 function createPingPongMarquee(wrapper, track, text, handleKey, index = -1) {
@@ -1328,8 +1828,18 @@ function createPingPongMarquee(wrapper, track, text, handleKey, index = -1) {
     }
 
     setTimeout(() => {
+        if (!wrapper || !track) return;
+
+        if (wrapper.clientWidth <= 0) {
+            track.style.transform = "translateX(0px)";
+            return;
+        }
+
         const maxScroll = track.scrollWidth - wrapper.clientWidth;
-        if (maxScroll <= 2) return;
+        if (maxScroll <= 2) {
+            track.style.transform = "translateX(0px)";
+            return;
+        }
 
         const SPEED_PX_PER_SEC = 35;
         const scrollDuration = Math.max(1500, (maxScroll / SPEED_PX_PER_SEC) * 1000);
@@ -1343,12 +1853,18 @@ function createPingPongMarquee(wrapper, track, text, handleKey, index = -1) {
             startTime = performance.now();
 
             function step(now) {
-                if (!track) return;
+                if (!track || !wrapper) return;
+
+                const currentMaxScroll = track.scrollWidth - wrapper.clientWidth;
+                if (currentMaxScroll <= 2 || wrapper.clientWidth <= 0) {
+                    track.style.transform = "translateX(0px)";
+                    return;
+                }
 
                 if (state === "SCROLL_RIGHT") {
                     const elapsed = now - startTime;
                     const progress = Math.min(elapsed / scrollDuration, 1);
-                    track.style.transform = `translateX(${-progress * maxScroll}px)`;
+                    track.style.transform = `translateX(${-progress * currentMaxScroll}px)`;
 
                     if (progress >= 1) {
                         state = "WAIT_END";
@@ -1362,7 +1878,7 @@ function createPingPongMarquee(wrapper, track, text, handleKey, index = -1) {
                 } else if (state === "SCROLL_LEFT") {
                     const elapsed = now - startTime;
                     const progress = Math.min(elapsed / scrollDuration, 1);
-                    track.style.transform = `translateX(${-(1 - progress) * maxScroll}px)`;
+                    track.style.transform = `translateX(${-(1 - progress) * currentMaxScroll}px)`;
 
                     if (progress >= 1) {
                         state = "WAIT_START";
@@ -1380,7 +1896,7 @@ function createPingPongMarquee(wrapper, track, text, handleKey, index = -1) {
 
             handleObj.raf = requestAnimationFrame(step);
         }, PAUSE_DURATION);
-    }, 50);
+    }, 300);
 }
 
 function applyPlaylistScrolling() {
@@ -1551,57 +2067,229 @@ function updateArrowUI() {
 
 function renderSettings() {
     const container = document.getElementById("settings-content");
+    if (!container) return;
+
+    if (container.querySelector('#setting-crossfade-row')) {
+        updateSettingsUIValues();
+        return;
+    }
 
     let html = "";
 
     html += `
-        <div class="info-row settings-row ${isAppsConnectEnabled ? 'disabled' : ''}" id="setting-gif-row" style="cursor: ${isAppsConnectEnabled ? 'not-allowed' : 'pointer'}; margin-bottom: 8px;">
-            <span>GIF Icon</span>
-            <span class="settings-toggle ${isGifIconEnabled ? 'active' : ''}">
-                ${isGifIconEnabled ? 'ON' : 'OFF'}
-            </span>
+        <div class="settings-row-item ${isAppsConnectEnabled ? 'disabled' : ''}" id="setting-gif-row">
+            <div class="settings-row-main">
+                <span>GIF Icon</span>
+                <span class="settings-toggle ${userGifPreference ? 'active' : ''}">
+                    ${userGifPreference ? 'ON' : 'OFF'}
+                </span>
+            </div>
         </div>
     `;
 
     html += `
-        <div class="info-row settings-row" id="setting-apps-row" style="cursor: pointer;">
-            <span>APPs Connect (Beta)</span>
-            <span class="settings-toggle ${isAppsConnectEnabled ? 'active' : ''}">
-                ${isAppsConnectEnabled ? 'ON' : 'OFF'}
-            </span>
+        <div class="settings-row-item ${isAppsConnectEnabled ? 'disabled' : ''}" id="setting-crossfade-row">
+            <div class="settings-row-main" id="setting-crossfade-header">
+                <span>Crossfade Song</span>
+                <span class="settings-toggle ${isCrossfadeEnabled ? 'active' : ''}">
+                    ${isCrossfadeEnabled ? 'ON' : 'OFF'}
+                </span>
+            </div>
+            <div class="crossfade-control-wrapper ${isCrossfadeEnabled ? 'expanded' : ''}" id="crossfade-control-wrapper">
+                <div class="crossfade-slider-header">
+                    <span>Duration</span>
+                    <span id="crossfade-val-text">${crossfadeDuration}s</span>
+                </div>
+                <input type="range" id="crossfade-slider" min="1" max="10" value="${crossfadeDuration}">
+            </div>
+        </div>
+    `;
+
+    html += `
+        <div class="settings-row-item" id="setting-visualizer-row">
+            <div class="settings-row-main">
+                <span>Audio Visualizer</span>
+                <span class="settings-toggle ${isVisualizerEnabled ? 'active' : ''}">
+                    ${isVisualizerEnabled ? 'ON' : 'OFF'}
+                </span>
+            </div>
+        </div>
+    `;
+
+    html += `
+        <div class="settings-row-item" id="setting-apps-row">
+            <div class="settings-row-main">
+                <span>APPs Connect (Beta)</span>
+                <span class="settings-toggle ${isAppsConnectEnabled ? 'active' : ''}">
+                    ${isAppsConnectEnabled ? 'ON' : 'OFF'}
+                </span>
+            </div>
         </div>
     `;
 
     container.innerHTML = html;
 
+    bindSettingsEvents();
+    updateCrossfadeSliderFill(crossfadeDuration);
+}
+
+function updateSettingsUIValues() {
+    const gifToggle = document.querySelector("#setting-gif-row .settings-toggle");
+    const gifRow = document.getElementById("setting-gif-row");
+    if (gifRow && gifToggle) {
+        if (isAppsConnectEnabled) {
+            gifRow.classList.add("disabled");
+        } else {
+            gifRow.classList.remove("disabled");
+        }
+        gifToggle.textContent = userGifPreference ? 'ON' : 'OFF';
+        gifToggle.className = `settings-toggle ${userGifPreference ? 'active' : ''}`;
+    }
+
+    const crossfadeRow = document.getElementById("setting-crossfade-row");
+    const crossfadeHeader = document.getElementById("setting-crossfade-header");
+    const crossfadeToggle = document.querySelector("#setting-crossfade-header .settings-toggle");
+    const crossfadeWrapper = document.getElementById("crossfade-control-wrapper");
+
+    if (crossfadeRow && crossfadeHeader && crossfadeToggle && crossfadeWrapper) {
+        if (isAppsConnectEnabled) {
+            crossfadeRow.classList.add("disabled");
+        } else {
+            crossfadeRow.classList.remove("disabled");
+        }
+        crossfadeToggle.textContent = isCrossfadeEnabled ? 'ON' : 'OFF';
+        crossfadeToggle.className = `settings-toggle ${isCrossfadeEnabled ? 'active' : ''}`;
+
+        if (isCrossfadeEnabled) {
+            crossfadeWrapper.classList.add("expanded");
+        } else {
+            crossfadeWrapper.classList.remove("expanded");
+        }
+    }
+
+    const visualizerToggle = document.querySelector("#setting-visualizer-row .settings-toggle");
+    if (visualizerToggle) {
+        visualizerToggle.textContent = isVisualizerEnabled ? 'ON' : 'OFF';
+        visualizerToggle.className = `settings-toggle ${isVisualizerEnabled ? 'active' : ''}`;
+    }
+
+    const appsToggle = document.querySelector("#setting-apps-row .settings-toggle");
+    if (appsToggle) {
+        appsToggle.textContent = isAppsConnectEnabled ? 'ON' : 'OFF';
+        appsToggle.className = `settings-toggle ${isAppsConnectEnabled ? 'active' : ''}`;
+    }
+
+    updateCrossfadeSliderFill(crossfadeDuration);
+}
+
+function bindSettingsEvents() {
     const gifRow = document.getElementById("setting-gif-row");
     if (gifRow) {
         gifRow.onclick = () => {
             if (isAppsConnectEnabled) return;
 
-            isGifIconEnabled = !isGifIconEnabled;
+            userGifPreference = !userGifPreference;
+            isGifIconEnabled = userGifPreference;
             refreshCurrentSongCover();
-            renderSettings();
+            updateSettingsUIValues();
+        };
+    }
+
+    const crossfadeHeader = document.getElementById("setting-crossfade-header");
+    if (crossfadeHeader) {
+        crossfadeHeader.onclick = () => {
+            if (isAppsConnectEnabled || isExpandAnimating) return;
+
+            isExpandAnimating = true;
+            isCrossfadeEnabled = !isCrossfadeEnabled;
+
+            updateSettingsUIValues();
+
+            setTimeout(() => {
+                isExpandAnimating = false;
+                if (isCrossfadeEnabled) {
+                    startAutoScrollSettings();
+                } else {
+                    stopAutoScrollSettings();
+                }
+            }, 1500);
+        };
+    }
+
+    const crossfadeSlider = document.getElementById("crossfade-slider");
+    if (crossfadeSlider) {
+        crossfadeSlider.oninput = (e) => {
+            crossfadeDuration = parseInt(e.target.value);
+            const valText = document.getElementById("crossfade-val-text");
+            if (valText) valText.textContent = `${crossfadeDuration}s`;
+            updateCrossfadeSliderFill(crossfadeDuration);
+        };
+    }
+
+    const visualizerRow = document.getElementById("setting-visualizer-row");
+    if (visualizerRow) {
+        visualizerRow.onclick = () => {
+            isVisualizerEnabled = !isVisualizerEnabled;
+            window.isVisualizerEnabled = isVisualizerEnabled;
+
+            const visualizerCanvas = document.getElementById('audiovisualizer');
+            if (visualizerCanvas && !isVisualizerEnabled) {
+                const ctx = visualizerCanvas.getContext('2d');
+                if (ctx) ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            }
+
+            updateSettingsUIValues();
         };
     }
 
     const appsRow = document.getElementById("setting-apps-row");
     if (appsRow) {
         appsRow.onclick = () => {
+            if (isExpandAnimating) return;
+
+            let wasCrossfadeOpen = isCrossfadeEnabled;
             isAppsConnectEnabled = !isAppsConnectEnabled;
 
             if (isAppsConnectEnabled) {
-                if (!gifStateBackup && isGifIconEnabled) {
+                if (!gifStateBackup && userGifPreference) {
                     gifStateBackup = true;
                 }
+                if (!crossfadeStateBackup && isCrossfadeEnabled) {
+                    crossfadeStateBackup = true;
+                }
                 isGifIconEnabled = false;
+                isCrossfadeEnabled = false;
+
+                if (wasCrossfadeOpen) {
+                    isExpandAnimating = true;
+                    updateSettingsUIValues();
+
+                    setTimeout(() => {
+                        isExpandAnimating = false;
+                        handleConnectStateChange();
+                        stopAutoScrollSettings();
+                    }, 1500);
+                    return;
+                }
             } else {
+                userGifPreference = gifStateBackup;
                 isGifIconEnabled = gifStateBackup;
                 gifStateBackup = false;
+
+                isCrossfadeEnabled = crossfadeStateBackup;
+                crossfadeStateBackup = false;
             }
 
-            renderSettings();
+            updateSettingsUIValues();
             handleConnectStateChange();
+
+            if (isCrossfadeEnabled) {
+                setTimeout(() => {
+                    startAutoScrollSettings();
+                }, 1500);
+            } else {
+                stopAutoScrollSettings();
+            }
         };
     }
 }
@@ -1752,27 +2440,67 @@ function row(label, value) {
 
 
 /* ==========================================================================
-   13. PAGE NAVIGATION OBSERVER FOR FIRST LOAD & RESET
+   13. PAGE NAVIGATION OBSERVER
    ========================================================================== */
 
 const selectorNav = document.getElementById('pageSelector');
 
-if (selectorNav) {
-    const musicObserver = new MutationObserver(() => {
-        if (!selectorNav.classList.contains('at-start')) {
+function handlePageSelectorState() {
+    if (!selectorNav) return;
+    const isAtStart = selectorNav.classList.contains('at-start');
+
+    if (!isAtStart) {
+        if (typeof resetMusicPanels === 'function') {
             resetMusicPanels();
         }
+
+        if (userGifPreference && isGifIconEnabled) {
+            isGifIconEnabled = false;
+            refreshCurrentSongCover();
+            updateSettingsUIValues();
+        }
+    } else {
+        if (userGifPreference && !isGifIconEnabled && !isAppsConnectEnabled) {
+            isGifIconEnabled = true;
+            refreshCurrentSongCover();
+            updateSettingsUIValues();
+        }
+    }
+}
+
+if (selectorNav) {
+    const musicObserver = new MutationObserver(() => {
+        handlePageSelectorState();
     });
 
     musicObserver.observe(selectorNav, { attributes: true, attributeFilter: ['class'] });
 
-    selectorNav.querySelectorAll('i').forEach(navBtn => {
+    pageSelector.querySelectorAll('i').forEach(navBtn => {
         navBtn.addEventListener('click', () => {
-            setTimeout(() => {
-                if (!selectorNav.classList.contains('at-start')) {
-                    resetMusicPanels();
-                }
-            }, 50);
+            setTimeout(handlePageSelectorState, 50);
         });
     });
 }
+
+
+/* ==========================================================================
+   14. PAGE LIFECYCLE & INITIALIZATION TRIGGER
+   ========================================================================== */
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof pageLoad === 'function' && !pageLoad.isLoaded) {
+            pageLoad();
+        }
+    });
+} else {
+    if (typeof pageLoad === 'function' && !pageLoad.isLoaded) {
+        pageLoad();
+    }
+}
+
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});

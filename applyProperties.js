@@ -1,13 +1,30 @@
 /* ==========================================================================
-   1. WALLPAPER ENGINE PROPERTIES LISTENER
+   1. INITIAL CACHE RESTORATION
+   ========================================================================== */
+
+if (localStorage.getItem('we_backgroundbrightness') !== null && typeof background !== 'undefined' && background) {
+    background.style.filter = `brightness(${parseInt(localStorage.getItem('we_backgroundbrightness')) / 100})`;
+}
+
+if (localStorage.getItem('we_musicvolume') !== null) {
+    volume = parseInt(localStorage.getItem('we_musicvolume')) / 100;
+}
+
+
+/* ==========================================================================
+   2. WALLPAPER ENGINE PROPERTIES LISTENER
    ========================================================================== */
 
 window.wallpaperPropertyListener = {
     applyUserProperties: function(properties) {
         if (properties.backgroundbrightness) {
-            background.style.filter = `brightness(${properties.backgroundbrightness.value / 100})`;
+            localStorage.setItem('we_backgroundbrightness', properties.backgroundbrightness.value);
+            if (typeof background !== 'undefined' && background) {
+                background.style.filter = `brightness(${properties.backgroundbrightness.value / 100})`;
+            }
         }
         if (properties.audiovisualizerypos) {
+            localStorage.setItem('we_audiovisualizerypos', properties.audiovisualizerypos.value);
             audiovisualizerypos = parseInt(properties.audiovisualizerypos.value);
         }
         if (properties.enabledragging) {
@@ -17,18 +34,21 @@ window.wallpaperPropertyListener = {
             randomizeSongs = properties.randomizesongs.value;
         }
         if (properties.mirroredvisualizer) {
+            localStorage.setItem('we_mirroredvisualizer', properties.mirroredvisualizer.value);
             isMirrored = properties.mirroredvisualizer.value;
         }
         if (properties.musicplayatstart) {
             playAtStart = properties.musicplayatstart.value;
-            if (!pageLoad.isLoaded) pageLoad();
+            if (typeof pageLoad === 'function' && !pageLoad.isLoaded) pageLoad();
         }
         if (properties.soundsensitivity) {
+            localStorage.setItem('we_soundsensitivity', properties.soundsensitivity.value);
             soundsensitivity = properties.soundsensitivity.value;
         }
         if (properties.musicvolume) {
+            localStorage.setItem('we_musicvolume', properties.musicvolume.value);
             volume = parseInt(properties.musicvolume.value) / 100;
-            if (currentSong && currentSong.audio) {
+            if (typeof currentSong !== 'undefined' && currentSong && currentSong.audio) {
                 currentSong.audio.volume = volume;
             }
         }
@@ -37,7 +57,9 @@ window.wallpaperPropertyListener = {
 
 
 /* ==========================================================================
-   2. MEDIA PLAYBACK INTEGRATION LISTENER
+   3. MEDIA PLAYBACK INTEGRATION LISTENER
    ========================================================================== */
 
-window.wallpaperRegisterMediaPlaybackListener(wallpaperMediaPlaybackListener);
+if (window.wallpaperRegisterMediaPlaybackListener && typeof wallpaperMediaPlaybackListener === 'function') {
+    window.wallpaperRegisterMediaPlaybackListener(wallpaperMediaPlaybackListener);
+}

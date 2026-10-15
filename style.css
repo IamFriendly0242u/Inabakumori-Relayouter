@@ -24,8 +24,27 @@ html, body {
     display: flex;
     justify-content: end;
     align-items: end;
-
     --bottom-offset: 30px;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000;
+    z-index: 99999;
+    pointer-events: none;
+    opacity: 1;
+    animation: mainPageFadeIn 3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes mainPageFadeIn {
+    0% { opacity: 1; visibility: visible; }
+    55% { opacity: 1; visibility: visible; }
+    100% { opacity: 0; visibility: hidden; }
 }
 
 
@@ -43,6 +62,12 @@ html, body {
     background-size: cover;
     background-position-x: 50%;
     z-index: -100;
+    transition: filter 1.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#backgroundScroller.dim-out {
+    filter: brightness(0) !important;
+    transition: filter 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 #pageSelector {
@@ -53,7 +78,7 @@ html, body {
     bottom: calc(60px + var(--bottom-offset));
     transform: translate(-50%, 0);
     z-index: 10;
-    transition: gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: gap 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #pageSelector i {
@@ -68,9 +93,9 @@ html, body {
     cursor: pointer;
     overflow: hidden;
     flex-shrink: 0;
-    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-    width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #pageSelector i img {
@@ -135,6 +160,60 @@ html, body {
     bottom: -40px !important;
 }
 
+#pageSelector.closing-center {
+    gap: 10px !important;
+}
+
+#pageSelector.closing-center #center {
+    transform: translateY(80px) scale(0.4) !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    pointer-events: none !important;
+}
+
+#pageSelector.closing-sides #left,
+#pageSelector.closing-sides #right {
+    transform: translateY(80px) scale(0.4) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body.is-intro #pageSelector {
+    gap: 0 !important;
+}
+
+body.is-intro #pageSelector #left,
+body.is-intro #pageSelector #right {
+    opacity: 0;
+    transform: translateY(80px) scale(0.4);
+    pointer-events: none;
+}
+
+body.is-intro #pageSelector.sides-in #left,
+body.is-intro #pageSelector.sides-in #right {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+body.is-intro #pageSelector #center {
+    opacity: 0;
+    width: 0;
+    transform: translateY(80px) scale(0.4);
+    pointer-events: none;
+}
+
+body.is-intro #pageSelector.open-center {
+    gap: 20px !important;
+}
+
+body.is-intro #pageSelector.open-center #center {
+    opacity: 1 !important;
+    width: 50px !important;
+    transform: translateY(0) scale(1) !important;
+    pointer-events: auto !important;
+}
+
 
 /* ==========================================================================
    3. TIME & DATE DISPLAY
@@ -142,7 +221,7 @@ html, body {
 
 #timeDisplay {
     position: relative;
-    width: 350px;
+    width: 360px;
     height: 200px;
     box-sizing: border-box;
     background-color: #36363670;
@@ -172,13 +251,16 @@ html, body {
 }
 
 #date {
-    font-size: 1.5rem;
-    display: grid;
-    place-items: center;
+    font-size: 1.3rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex: 1;
     background-color: #e6e6e6;
     color: black;
     width: 100%;
+    padding-inline: 16px;
 }
 
 #timeDisplayBigger {
@@ -197,8 +279,14 @@ html, body {
     align-items: center;
     color: white;
     font-size: 4rem;
-    transition: bottom 0.5s, opacity 0.5s;
+    transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
     z-index: 10;
+}
+
+#timeDisplayBigger.intro-clock-hide {
+    bottom: -250px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 #time1 {
@@ -207,13 +295,23 @@ html, body {
 }
 
 #date1 {
-    font-size: 2rem;
-    display: grid;
-    place-items: center;
+    font-size: 1.85rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex: 1;
     background-color: #e6e6e6;
     color: black;
     width: 100%;
+    padding-inline: 20px;
+}
+
+.exit-clock-down {
+    bottom: -250px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: bottom 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease !important;
 }
 
 
@@ -230,6 +328,12 @@ html, body {
     z-index: -99;
     user-select: none;
     pointer-events: none;
+    transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#audiovisualizer.exit-fade {
+    opacity: 0 !important;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 
@@ -249,6 +353,13 @@ html, body {
     border-radius: 40px;
     overflow: hidden;
     z-index: 100;
+    transition: margin-top 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#calendar-wrapper.widget-down {
+    margin-top: 180px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 #calendar-main-card {
@@ -262,11 +373,11 @@ html, body {
     opacity: 1;
     overflow: hidden;
     display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 1.5s ease,
-    filter 1.5s ease;
+    background: transparent;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1.2s ease,
+    filter 1.2s ease;
 }
 
 #calendar-panel-left.hide-panel {
@@ -276,33 +387,76 @@ html, body {
     pointer-events: none;
 }
 
-#cal-close-btn {
+#calendar-panel-left.rail-only {
+    width: 34px !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#calendar-panel-left.rail-only .cal-panel-content {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+#cal-rail {
     width: 34px;
     height: 100%;
     background-color: #797979;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 1rem;
-    transition: opacity 0.5s ease, transform 0.5s ease, background-color 0.25s ease, color 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
     flex-shrink: 0;
     opacity: 0;
     transform: translateX(-15px);
     pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    z-index: 10;
 }
 
-#cal-close-btn.btn-visible {
+#cal-rail.rail-visible {
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
 }
 
-#cal-close-btn:hover {
+.cal-rail-btn {
+    width: 28px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.15rem;
+    border-radius: 8px;
+    transition: opacity 0.3s ease, background-color 0.2s ease, transform 0.2s ease;
+    user-select: none;
+}
+
+.cal-rail-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 3px;
+    display: block;
+}
+
+.cal-rail-btn:hover:not(.hidden):not(.controls-locked) {
     background-color: #8c8c8c;
     color: #ffffff;
+}
+
+.cal-rail-btn.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cal-rail-btn.controls-locked {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
 }
 
 .cal-panel-content {
@@ -312,6 +466,8 @@ html, body {
     padding: 30px 28px;
     box-sizing: border-box;
     overflow: hidden;
+    min-width: 386px;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
 #cal-panel-top {
@@ -337,29 +493,48 @@ html, body {
     font-weight: 700;
     color: #ffffff;
     letter-spacing: 1px;
-    margin-bottom: 6px;
-}
-
-#cal-selected-day-name {
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: 3px;
-    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.1;
     margin-bottom: 4px;
 }
 
+#cal-selected-day-name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 8px;
+}
+
 #cal-selected-date-display {
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    letter-spacing: 1.5px;
-    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 1.8px;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 4px 14px;
+    border-radius: 12px;
+    text-transform: uppercase;
 }
 
 .cal-panel-divider {
     width: 100%;
-    height: 1.5px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
     margin-block: 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cal-panel-divider::after {
+    content: '◆';
+    position: absolute;
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.35);
+    background: #363636;
+    padding-inline: 8px;
 }
 
 #cal-panel-bottom {
@@ -367,16 +542,62 @@ html, body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    margin-top: 0;
 }
 
 .events-header-title {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 2px;
     color: rgba(255, 255, 255, 0.45);
     text-transform: uppercase;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: color 0.2s ease;
+    overflow: hidden;
+}
+
+.events-header-title.clickable-tab {
+    cursor: pointer;
+}
+
+.events-header-title.clickable-tab:hover {
+    color: #ffffff;
+}
+
+.events-header-title .title-text {
+    display: inline-block;
+    white-space: nowrap;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+}
+
+.events-header-title .title-text.slide-out-left {
+    transform: translateX(-40px);
+    opacity: 0;
+}
+
+.events-header-title .title-text.slide-in-right {
+    animation: titleSlideInFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes titleSlideInFromRight {
+    0% {
+        transform: translateX(40px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.events-header-title::before,
+.events-header-title::after {
+    display: none;
 }
 
 #cal-events-list {
@@ -407,7 +628,7 @@ html, body {
     justify-content: space-between;
     height: 48px;
     box-sizing: border-box;
-    transition: background 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     flex-shrink: 0;
     opacity: 0;
     animation: eventRevealIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -449,6 +670,7 @@ html, body {
 
 .event-item:hover {
     background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 
 .event-text-wrapper {
@@ -460,6 +682,8 @@ html, body {
     display: flex;
     align-items: center;
     margin-right: 10px;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 
 .event-text-track {
@@ -491,10 +715,19 @@ html, body {
 }
 
 .no-event {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.4);
     font-style: italic;
     border-style: dashed;
     justify-content: center;
+    text-align: center;
+    padding-inline: 16px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.no-event.error-event {
+    color: rgba(231, 76, 60, 0.85);
+    border-color: rgba(231, 76, 60, 0.25);
 }
 
 #calendar-header {
@@ -678,6 +911,19 @@ html, body {
     font-weight: 700;
 }
 
+.cal-day-pencil-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    filter: brightness(0);
+    pointer-events: none;
+    transition: transform 0.2s ease;
+}
+
+.valid-day.selected-day:hover .cal-day-pencil-icon {
+    transform: scale(1.12);
+}
+
 .beforeDays,
 .afterDays {
     color: #a3a3a3;
@@ -699,36 +945,6 @@ html, body {
     z-index: 20;
 }
 
-#years-wrapper::before {
-    content: '';
-    position: absolute;
-    left: 35px;
-    top: 25px;
-    bottom: 25px;
-    width: 25px;
-    border-left: 3px solid rgba(255, 255, 255, 0.25);
-    border-top: 3px solid rgba(255, 255, 255, 0.25);
-    border-bottom: 3px solid rgba(255, 255, 255, 0.25);
-    border-radius: 12px 0 0 12px;
-    pointer-events: none;
-    z-index: 6;
-}
-
-#years-wrapper::after {
-    content: '';
-    position: absolute;
-    right: 35px;
-    top: 25px;
-    bottom: 25px;
-    width: 25px;
-    border-right: 3px solid rgba(255, 255, 255, 0.25);
-    border-top: 3px solid rgba(255, 255, 255, 0.25);
-    border-bottom: 3px solid rgba(255, 255, 255, 0.25);
-    border-radius: 0 12px 12px 0;
-    pointer-events: none;
-    z-index: 6;
-}
-
 #years-wrapper.hide-years {
     opacity: 0;
     pointer-events: none;
@@ -739,34 +955,13 @@ html, body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 76%;
-    height: 56px;
-    border-top: 2px solid rgba(255, 255, 255, 0.3);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    width: 200px;
+    height: 52px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
     pointer-events: none;
     z-index: 5;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-inline: 20px;
-}
-
-.year-selection-overlay::before {
-    content: '>>';
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-}
-
-.year-selection-overlay::after {
-    content: '<<';
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #ffffff;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
 }
 
 #years-list {
@@ -780,6 +975,8 @@ html, body {
     box-sizing: border-box;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
 }
 
 #years-list::-webkit-scrollbar {
@@ -792,23 +989,54 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.3rem;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 1px;
     cursor: pointer;
-    transition: font-size 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
+    transition: font-size 0.25s cubic-bezier(0.22, 1, 0.36, 1), color 0.25s ease;
     width: 100%;
     user-select: none;
 }
 
 .year-item:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .year-item.active-year {
     font-size: 2rem;
     font-weight: 700;
     color: #ffffff;
-    text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+    letter-spacing: 1px;
+}
+
+#calendar-panel-right {
+    width: 420px;
+    height: 607px;
+    opacity: 1;
+    overflow: hidden;
+    display: flex;
+    background: transparent;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1.2s ease,
+    filter 1.2s ease;
+}
+
+#calendar-panel-right.hide-panel {
+    width: 0;
+    opacity: 0;
+    border-left: none;
+    pointer-events: none;
+}
+
+.cal-panel-right-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 20px;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 
@@ -838,6 +1066,13 @@ html, body {
     backdrop-filter: invert(1) blur(5px);
     z-index: 100;
     flex-shrink: 0;
+    transition: margin-top 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#media-wrapper.widget-down {
+    margin-top: 180px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 #media-image {
@@ -955,7 +1190,10 @@ html, body {
 
 .hide-properties {
     width: 0 !important;
-    opacity: 0;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
 }
 
 #media-properties > div {
@@ -1096,22 +1334,26 @@ html, body {
 }
 
 #timer-tooltip {
-    font-size: 0.9rem;
+    position: absolute;
+    top: -24px;
+    left: 0;
+    width: 100%;
+    font-size: 0.85rem;
     color: #ffffff;
     text-align: center;
-    margin-bottom: 4px;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    height: 18px;
-    line-height: 18px;
     font-weight: 600;
     letter-spacing: 0.4px;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
 }
 
-#timer-tooltip.hide-tooltip {
-    opacity: 0;
+#timer-tooltip.hide-tooltip,
+#media-wrapper.apps-active #timer-tooltip,
+#media-wrapper.spotify-active #timer-tooltip {
+    opacity: 0 !important;
     transform: translateY(4px);
-    pointer-events: none;
+    display: none !important;
 }
 
 .media-time {
@@ -1221,7 +1463,7 @@ html, body {
 
 
 /* ==========================================================================
-   APPS CONNECT ACTIVE TRANSITIONS
+   9. APPS CONNECT ACTIVE TRANSITIONS
    ========================================================================== */
 
 #media-wrapper.apps-active #switch-menu,
@@ -1245,13 +1487,13 @@ html, body {
 
 #media-wrapper.apps-active .slider-wrapper,
 #media-wrapper.spotify-active .slider-wrapper {
-    transform: translateY(20px);
+    transform: translateY(15px);
     margin-top: 10px !important;
 }
 
 
 /* ==========================================================================
-   APPS CONNECT SYNCED LYRICS
+   10. APPS CONNECT SYNCED LYRICS (LOW LATENCY & AUTO-EXPAND)
    ========================================================================== */
 
 #media-lyrics-container {
@@ -1266,13 +1508,14 @@ html, body {
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition: height 0.5s ease, margin-top 0.5s ease, opacity 0.5s ease;
+    transition: height 0.4s ease, margin-top 0.4s ease, opacity 0.4s ease;
+    width: calc(100% - 30px);
 }
 
 #media-wrapper.apps-active #media-lyrics-container,
 #media-wrapper.spotify-active #media-lyrics-container {
-    height: 72px;
-    margin-top: 24px;
+    height: 68px;
+    margin-top: 10px;
     opacity: 1;
     pointer-events: auto;
 }
@@ -1282,7 +1525,7 @@ html, body {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    transition: transform 0.18s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 #media-lyrics-wrapper.slide-up {
@@ -1294,14 +1537,14 @@ html, body {
     font-weight: 700;
     color: #ffffff;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
+    width: max-content;
+    max-width: none;
     text-align: center;
     height: 34px;
     line-height: 34px;
     letter-spacing: 0.3px;
-    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: transform;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 #media-lyric-next {
@@ -1316,23 +1559,23 @@ html, body {
     height: 30px;
     line-height: 30px;
     transform-origin: center center;
-    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), color 0.35s ease;
+    transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.25, 1, 0.5, 1), color 0.18s ease;
 }
 
 #media-lyrics-wrapper.slide-up #media-lyric-current {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.85);
 }
 
 #media-lyrics-wrapper.slide-up #media-lyric-next {
     opacity: 1;
     color: #ffffff;
-    transform: scale(1.3529);
+    transform: scale(1.3);
 }
 
 
 /* ==========================================================================
-   9. MEDIA PLAYLIST PANEL & ITEMS
+   11. MEDIA PLAYLIST PANEL & ITEMS
    ========================================================================== */
 
 #media-playlist {
@@ -1428,7 +1671,7 @@ html, body {
 
 
 /* ==========================================================================
-   10. SETTINGS PANEL
+   12. SETTINGS PANEL & EXPANDABLE ROWS
    ========================================================================== */
 
 #settings-panel {
@@ -1436,13 +1679,12 @@ html, body {
     height: 300px;
     opacity: 0;
     overflow: hidden;
-    background: rgba(25, 25, 25, 0.65);
+    background: rgba(0, 0, 0, 0.25);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
+    border: none;
     border-radius: 30px;
-    margin-block: 10px;
-    margin-right: 20px;
-    margin-left: -20px;
+    margin: 0;
     position: relative;
     z-index: 99;
     transform: translateX(30px) scale(0.95);
@@ -1451,19 +1693,23 @@ html, body {
     transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 1.4s ease,
     transform 1.5s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 1.5s ease;
+    filter 1.5s ease,
+    margin 1.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #media-container.settings-open #settings-panel {
     width: 300px;
     opacity: 1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-block: 10px;
+    margin-right: 10px;
     transform: translateX(0) scale(1);
     filter: blur(0);
     pointer-events: auto;
 }
 
 #settings-panel .info-content {
-    padding: 22px 18px;
+    padding: 20px 16px;
     height: 100%;
     box-sizing: border-box;
     display: flex;
@@ -1472,16 +1718,17 @@ html, body {
 
 .settings-title {
     text-align: center;
-    font-size: 15px;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.45);
     letter-spacing: 2px;
     text-transform: uppercase;
-    margin: 0 0 16px 0;
+    margin: 0 0 14px 0;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .settings-title::before,
@@ -1489,11 +1736,11 @@ html, body {
     content: '';
     flex: 1;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2));
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18));
 }
 
 .settings-title::after {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent);
 }
 
 #settings-panel .info-section {
@@ -1502,53 +1749,109 @@ html, body {
     transform: none;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#settings-panel .info-section::-webkit-scrollbar {
+    display: none;
 }
 
 #settings-panel .info-section::before {
     display: none;
 }
 
-.settings-row {
-    padding: 10px 16px;
-    border-radius: 18px;
+.settings-row-item {
+    width: 100%;
+    border-radius: 14px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: all 0.25s ease;
+    box-sizing: border-box;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.settings-row-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.settings-row-main {
+    padding: 0 14px;
+    height: 44px;
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    user-select: none;
+    box-sizing: border-box;
     position: relative;
+    user-select: none;
+}
+
+.crossfade-control-wrapper {
+    max-height: 0;
+    opacity: 0;
+    padding: 0 14px;
+    transition: max-height 1.5s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1.2s ease,
+    padding 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     overflow: hidden;
-    height: 44px;
+    width: 100%;
     box-sizing: border-box;
 }
 
-.settings-row::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 25%;
-    height: 50%;
-    width: 3px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 0 4px 4px 0;
-    transition: background 0.25s ease, height 0.25s ease;
+.crossfade-control-wrapper.expanded {
+    max-height: 80px;
+    opacity: 1;
+    padding: 0 14px 14px 14px;
 }
 
-.settings-row:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: scale(1.01);
+.crossfade-slider-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
 }
 
-.settings-row:hover::before {
-    background: #ffffff;
-    height: 70%;
+#crossfade-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #ffffff 50%, #000000 50%);
+    outline: none;
+    opacity: 0.9;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    user-select: none;
+    pointer-events: auto;
 }
 
-.settings-row span:first-child {
+#crossfade-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    background-color: #ffffff;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+#crossfade-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.settings-row-main span:first-child {
     font-size: 13px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.85);
@@ -1556,58 +1859,55 @@ html, body {
     display: flex;
     align-items: center;
     height: 100%;
-    transition: all 0.25s ease;
+    transition: all 0.2s ease;
 }
 
 .settings-toggle {
     padding: 5px 14px;
-    border-radius: 20px;
+    border-radius: 12px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.5px;
-    background: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.7) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+    min-width: 48px;
 }
 
 .settings-toggle.active {
     background: #ffffff !important;
     color: #000000 !important;
     border-color: #ffffff !important;
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+    box-shadow: none !important;
 }
 
-.settings-row.disabled {
+.settings-row-item.disabled {
     cursor: not-allowed !important;
     background: rgba(255, 255, 255, 0.02) !important;
-    border-color: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.04) !important;
     transform: none !important;
 }
 
-.settings-row.disabled::before {
-    background: rgba(255, 255, 255, 0.1) !important;
-    height: 30% !important;
-}
-
-.settings-row.disabled span:first-child {
-    color: rgba(255, 255, 255, 0.35) !important;
+.settings-row-item.disabled span:first-child {
+    color: rgba(255, 255, 255, 0.3) !important;
     text-decoration: line-through;
 }
 
-.settings-row.disabled .settings-toggle {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: rgba(255, 255, 255, 0.25) !important;
-    border-color: rgba(255, 255, 255, 0.05) !important;
+.settings-row-item.disabled .settings-toggle {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.04) !important;
     box-shadow: none !important;
 }
 
 
 /* ==========================================================================
-   11. MEDIA INFO PANEL
+   13. MEDIA INFO PANEL
    ========================================================================== */
 
 #media-info-panel {
@@ -1615,13 +1915,12 @@ html, body {
     height: 300px;
     opacity: 0;
     overflow: hidden;
-    background: rgba(25, 25, 25, 0.65);
+    background: rgba(0, 0, 0, 0.25);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
+    border: none;
     border-radius: 30px;
-    margin-block: 10px;
-    margin-right: 10px;
-    margin-left: -20px;
+    margin: 0;
     position: relative;
     z-index: 99;
     transform: translateX(30px) scale(0.95);
@@ -1630,12 +1929,16 @@ html, body {
     transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 1.4s ease,
     transform 1.5s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 1.5s ease;
+    filter 1.5s ease,
+    margin 1.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #media-container.info-open #media-info-panel {
     width: 300px;
     opacity: 1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-block: 10px;
+    margin-right: 10px;
     transform: translateX(0) scale(1);
     filter: blur(0);
     pointer-events: auto;
@@ -1646,7 +1949,7 @@ html, body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 16px 14px;
+    padding: 20px 16px;
     gap: 10px;
     box-sizing: border-box;
 }
@@ -1656,21 +1959,22 @@ html, body {
     display: flex;
     gap: 12px;
     align-items: center;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 8px 12px;
-    border-radius: 16px;
+    border-radius: 14px;
 }
 
 #info-cover {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 10px;
     background-size: cover;
     background-position: center;
     image-rendering: -webkit-optimize-contrast;
     flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .info-main {
@@ -1694,7 +1998,7 @@ html, body {
 #info-artist {
     font-size: 11px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.5);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1723,10 +2027,10 @@ html, body {
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 3px 6px;
+    border-radius: 12px;
+    padding: 4px 8px;
 }
 
 #info-prev,
@@ -1734,28 +2038,28 @@ html, body {
     cursor: pointer;
     font-size: 16px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.7);
-    width: 22px;
-    height: 22px;
+    color: rgba(255, 255, 255, 0.6);
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
     user-select: none;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 #info-prev:hover,
 #info-next:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
 }
 
 #info-category {
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.85);
     font-weight: 700;
     font-size: 11px;
-    letter-spacing: 1.2px;
+    letter-spacing: 1.8px;
     text-transform: uppercase;
 }
 
@@ -1780,17 +2084,17 @@ html, body {
     justify-content: space-between;
     align-items: flex-start;
     font-size: 11px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 12px;
     border-radius: 12px;
     transition: background 0.2s ease, border-color 0.2s ease;
     flex-shrink: 0;
 }
 
 .info-row:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
 }
 
 .info-row span:first-child {

@@ -44,7 +44,16 @@
    ========================================================================== -->
 <div id="calendar-wrapper">
     <div id="calendar-panel-left" class="hide-panel">
-        <div id="cal-close-btn">&gt;</div>
+        <div id="cal-rail">
+            <div id="cal-scroll-up" class="cal-rail-btn hidden" title="Scroll Up">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            </div>
+            <div id="cal-close-btn" class="cal-rail-btn">&gt;</div>
+            <div id="cal-scroll-down" class="cal-rail-btn hidden" title="Scroll Down">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+        </div>
+
         <div class="cal-panel-content">
             <div id="cal-panel-top" class="hide-top-info">
                 <div id="panel-time">12:00PM</div>
@@ -93,6 +102,10 @@
                 <div id="years-list"></div>
             </div>
         </div>
+    </div>
+
+    <div id="calendar-panel-right" class="hide-panel">
+        <div class="cal-panel-right-content"></div>
     </div>
 </div>
 
