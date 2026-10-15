@@ -94,31 +94,69 @@ function syncPanelClock() {
 setInterval(syncPanelClock, 1000);
 syncPanelClock();
 
-function detectUserCountryCode() {
+async function detectUserCountryCode() {
+    const cacheKey = "osage_detected_country_data";
     try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-        if (tz.includes("Jakarta") || tz.includes("Makassar") || tz.includes("Jayapura") || tz.includes("Pontianak")) return "ID";
-        if (tz.includes("Tokyo")) return "JP";
-        if (tz.includes("New_York") || tz.includes("Chicago") || tz.includes("Denver") || tz.includes("Los_Angeles") || tz.includes("Anchorage") || tz.includes("Honolulu")) return "US";
-        if (tz.includes("London")) return "GB";
-        if (tz.includes("Seoul")) return "KR";
-        if (tz.includes("Berlin")) return "DE";
-        if (tz.includes("Paris")) return "FR";
-        if (tz.includes("Singapore")) return "SG";
-        if (tz.includes("Kuala_Lumpur")) return "MY";
-        if (tz.includes("Bangkok")) return "TH";
-
-        const lang = navigator.language || "en-US";
-        if (lang.includes("-")) {
-            const code = lang.split("-")[1].toUpperCase();
-            if (code.length === 2) return code;
+        const saved = localStorage.getItem(cacheKey);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.code && Date.now() - (parsed.timestamp || 0) < 24 * 60 * 60 * 1000) {
+                return parsed.code;
+            }
         }
     } catch (e) {}
-    return "ID";
+
+    if (navigator.onLine) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3500);
+            const res = await fetch("https://api.country.is/", { signal: controller.signal });
+            clearTimeout(timeout);
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.country && /^[A-Z]{2}$/i.test(data.country)) {
+                    const code = data.country.toUpperCase();
+                    try {
+                        localStorage.setItem(cacheKey, JSON.stringify({
+                            code: code,
+                            timestamp: Date.now()
+                        }));
+                    } catch (e) {}
+                    return code;
+                }
+            }
+        } catch (e) {}
+    }
+
+    try {
+        const resolvedLocale = new Intl.DateTimeFormat().resolvedOptions().locale;
+        if (resolvedLocale) {
+            const loc = new Intl.Locale(resolvedLocale);
+            if (loc.region && loc.region.length === 2) {
+                return loc.region.toUpperCase();
+            }
+        }
+    } catch (e) {}
+
+    try {
+        const navLangs = navigator.languages || [navigator.language];
+        for (let l of navLangs) {
+            if (l && l.includes("-")) {
+                const parts = l.split("-");
+                const region = parts[parts.length - 1].toUpperCase();
+                if (region.length === 2 && /^[A-Z]{2}$/.test(region)) {
+                    return region;
+                }
+            }
+        }
+    } catch (e) {}
+
+    return "US";
 }
 
 async function loadNationalHolidays(year) {
-    const country = detectUserCountryCode();
+    const country = await detectUserCountryCode();
     const cacheKey = `osage_holidays_${country}_${year}`;
 
     try {
@@ -127,6 +165,7 @@ async function loadNationalHolidays(year) {
             calNationalHolidaysCache = JSON.parse(saved);
             calHolidayFetchStatus = "success";
             calHolidayFetchErrorMsg = "";
+            applySmartDefaultView();
             return;
         }
     } catch (e) {}
@@ -134,6 +173,7 @@ async function loadNationalHolidays(year) {
     if (!navigator.onLine) {
         calHolidayFetchStatus = "error";
         calHolidayFetchErrorMsg = "No internet connection to load national holidays.";
+        applySmartDefaultView();
         return;
     }
 
@@ -170,10 +210,34 @@ async function loadNationalHolidays(year) {
         try {
             localStorage.setItem(cacheKey, JSON.stringify(mapped));
         } catch (e) {}
+
+        applySmartDefaultView();
     } catch (err) {
         calHolidayFetchStatus = "error";
         calHolidayFetchErrorMsg = "Unable to fetch national calendar. Check your network connection.";
+        applySmartDefaultView();
     }
+}
+
+function applySmartDefaultView() {
+    if (!isLeftPanelOpen()) return;
+
+    const monthNum = calActiveDateObj.getMonth() + 1;
+    const dayNumber = calActiveDayNum;
+    const key = `${monthNum}-${dayNumber}`;
+
+    const hasCustom = getStoredSpecialDays(monthNum, dayNumber);
+    const hasNational = calNationalHolidaysCache && calNationalHolidaysCache[key] && calNationalHolidaysCache[key].length > 0;
+
+    if (hasCustom && hasCustom.length > 0) {
+        calCurrentView = CAL_VIEW_SPECIAL_DAYS;
+    } else if (hasNational) {
+        calCurrentView = CAL_VIEW_CALENDARS;
+    } else {
+        calCurrentView = CAL_VIEW_OBSERVANCES;
+    }
+
+    renderCurrentViewContent(false);
 }
 
 function getStoredSpecialDays(monthNum, dayNumber) {
@@ -394,7 +458,9 @@ function renderCurrentViewContent(isManualSwitch = false) {
             emptyMessage = "No Special Days recorded. Please set up your special days first.";
         }
     } else if (calCurrentView === CAL_VIEW_CALENDARS) {
-        if (calHolidayFetchStatus === "error") {
+        if (calHolidayFetchStatus === "loading") {
+            emptyMessage = "Fetching national holidays...";
+        } else if (calHolidayFetchStatus === "error") {
             isErrorState = true;
             emptyMessage = calHolidayFetchErrorMsg || "Unable to fetch national calendar. Check your network connection.";
         } else {
@@ -495,18 +561,16 @@ function updateLeftPanelData(dayNumber, dateObj, isPanelAlreadyOpen = false) {
         calSelectedDateDisplay.innerHTML = `${monthName} ${dayNumber}, ${yearNum}`;
     }
 
-    if (!isPanelAlreadyOpen) {
-        const key = `${monthNum}-${dayNumber}`;
-        const hasCustom = getStoredSpecialDays(monthNum, dayNumber);
-        const hasNational = calNationalHolidaysCache && calNationalHolidaysCache[key] && calNationalHolidaysCache[key].length > 0;
+    const key = `${monthNum}-${dayNumber}`;
+    const hasCustom = getStoredSpecialDays(monthNum, dayNumber);
+    const hasNational = calNationalHolidaysCache && calNationalHolidaysCache[key] && calNationalHolidaysCache[key].length > 0;
 
-        if (hasCustom && hasCustom.length > 0) {
-            calCurrentView = CAL_VIEW_SPECIAL_DAYS;
-        } else if (hasNational) {
-            calCurrentView = CAL_VIEW_CALENDARS;
-        } else {
-            calCurrentView = CAL_VIEW_OBSERVANCES;
-        }
+    if (hasCustom && hasCustom.length > 0) {
+        calCurrentView = CAL_VIEW_SPECIAL_DAYS;
+    } else if (hasNational) {
+        calCurrentView = CAL_VIEW_CALENDARS;
+    } else {
+        calCurrentView = CAL_VIEW_OBSERVANCES;
     }
 
     renderCurrentViewContent(isPanelAlreadyOpen);

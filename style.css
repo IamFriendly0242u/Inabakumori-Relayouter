@@ -682,8 +682,6 @@ body.is-intro #pageSelector.open-center #center {
     display: flex;
     align-items: center;
     margin-right: 10px;
-    mask-image: linear-gradient(to right, black 80%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
 }
 
 .event-text-track {
