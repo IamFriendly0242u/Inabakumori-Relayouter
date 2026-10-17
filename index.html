@@ -34,9 +34,9 @@
    4. PAGE SELECTOR NAVIGATION
    ========================================================================== -->
 <div id="pageSelector">
-    <i id="left"><img src="assets/icons/icons8-back-16.png"></i>
-    <i id="center"><img id="centerIcon" src="assets/icons/icons8-video-32.png"></i>
-    <i id="right"><img src="assets/icons/icons8-forward-16.png"></i>
+    <i id="left"><img src="assets/icons/icons8-back-16.png" alt="Previous Page"></i>
+    <i id="center"><img id="centerIcon" src="assets/icons/icons8-video-32.png" alt="Video Hub"></i>
+    <i id="right"><img src="assets/icons/icons8-forward-16.png" alt="Next Page"></i>
 </div>
 
 <!-- ==========================================================================
@@ -74,14 +74,14 @@
 
     <div id="calendar-main-card">
         <div id="calendar-header">
-            <i id="cal-prev"><img src="assets/icons/icons8-back-16.png"></i>
+            <i id="cal-prev"><img src="assets/icons/icons8-back-16.png" alt="Previous Month"></i>
 
             <div class="calendar-title-container">
                 <span id="yearDisplay">2026</span>
-                <span id="monthDisplay">JULY</span>
+                <span id="monthDisplay">OCTOBER</span>
             </div>
 
-            <i id="cal-next"><img src="assets/icons/icons8-forward-16.png"></i>
+            <i id="cal-next"><img src="assets/icons/icons8-forward-16.png" alt="Next Month"></i>
         </div>
 
         <div id="calendar-body">
@@ -101,11 +101,107 @@
                 <div class="year-selection-overlay"></div>
                 <div id="years-list"></div>
             </div>
+
+            <div id="cal-virtual-keyboard">
+                <div class="cal-vk-header">
+                    <span id="cal-vk-title">KEYBOARD</span>
+                    <button type="button" class="cal-vk-close" id="cal-vk-close">✕</button>
+                </div>
+                <div class="cal-vk-rows">
+                    <div class="cal-vk-row">
+                        <button type="button" class="cal-vk-key" data-key="1">1</button>
+                        <button type="button" class="cal-vk-key" data-key="2">2</button>
+                        <button type="button" class="cal-vk-key" data-key="3">3</button>
+                        <button type="button" class="cal-vk-key" data-key="4">4</button>
+                        <button type="button" class="cal-vk-key" data-key="5">5</button>
+                        <button type="button" class="cal-vk-key" data-key="6">6</button>
+                        <button type="button" class="cal-vk-key" data-key="7">7</button>
+                        <button type="button" class="cal-vk-key" data-key="8">8</button>
+                        <button type="button" class="cal-vk-key" data-key="9">9</button>
+                        <button type="button" class="cal-vk-key" data-key="0">0</button>
+                        <button type="button" class="cal-vk-key cal-vk-action" id="cal-vk-backspace">⌫</button>
+                    </div>
+                    <div class="cal-vk-row">
+                        <button type="button" class="cal-vk-key" data-key="q">q</button>
+                        <button type="button" class="cal-vk-key" data-key="w">w</button>
+                        <button type="button" class="cal-vk-key" data-key="e">e</button>
+                        <button type="button" class="cal-vk-key" data-key="r">r</button>
+                        <button type="button" class="cal-vk-key" data-key="t">t</button>
+                        <button type="button" class="cal-vk-key" data-key="y">y</button>
+                        <button type="button" class="cal-vk-key" data-key="u">u</button>
+                        <button type="button" class="cal-vk-key" data-key="i">i</button>
+                        <button type="button" class="cal-vk-key" data-key="o">o</button>
+                        <button type="button" class="cal-vk-key" data-key="p">p</button>
+                        <button type="button" class="cal-vk-key" data-key="-">-</button>
+                    </div>
+                    <div class="cal-vk-row">
+                        <button type="button" class="cal-vk-key" data-key="a">a</button>
+                        <button type="button" class="cal-vk-key" data-key="s">s</button>
+                        <button type="button" class="cal-vk-key" data-key="d">d</button>
+                        <button type="button" class="cal-vk-key" data-key="f">f</button>
+                        <button type="button" class="cal-vk-key" data-key="g">g</button>
+                        <button type="button" class="cal-vk-key" data-key="h">h</button>
+                        <button type="button" class="cal-vk-key" data-key="j">j</button>
+                        <button type="button" class="cal-vk-key" data-key="k">k</button>
+                        <button type="button" class="cal-vk-key" data-key="l">l</button>
+                        <button type="button" class="cal-vk-key" data-key="_">_</button>
+                        <button type="button" class="cal-vk-key cal-vk-action" id="cal-vk-caps">⇪</button>
+                    </div>
+                    <div class="cal-vk-row">
+                        <button type="button" class="cal-vk-key cal-vk-action" id="cal-vk-clear">CLEAR</button>
+                        <button type="button" class="cal-vk-key" data-key="z">z</button>
+                        <button type="button" class="cal-vk-key" data-key="x">x</button>
+                        <button type="button" class="cal-vk-key" data-key="c">c</button>
+                        <button type="button" class="cal-vk-key" data-key="v">v</button>
+                        <button type="button" class="cal-vk-key" data-key="b">b</button>
+                        <button type="button" class="cal-vk-key" data-key="n">n</button>
+                        <button type="button" class="cal-vk-key" data-key="m">m</button>
+                        <button type="button" class="cal-vk-key" data-key=":">:</button>
+                        <button type="button" class="cal-vk-key" data-key="/">/</button>
+                        <button type="button" class="cal-vk-key" data-key=".">.</button>
+                    </div>
+                    <div class="cal-vk-row">
+                        <button type="button" class="cal-vk-key cal-vk-nav" id="cal-vk-left">◀</button>
+                        <button type="button" class="cal-vk-key cal-vk-space" id="cal-vk-space">SPACE</button>
+                        <button type="button" class="cal-vk-key cal-vk-nav" id="cal-vk-right">▶</button>
+                        <button type="button" class="cal-vk-key cal-vk-done" id="cal-vk-done">DONE</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="calendar-panel-right" class="hide-panel">
-        <div class="cal-panel-right-content"></div>
+        <div class="cal-panel-right-content">
+            <div id="cal-right-top">
+                <div class="cal-right-header-title">SPECIAL DAYS MANAGER</div>
+                <div class="cal-right-badges-row">
+                    <div id="cal-right-date-display">OCTOBER 15, 2026</div>
+                    <div id="cal-right-count-badge">0 EVENTS SCHEDULED</div>
+                </div>
+            </div>
+
+            <div class="cal-panel-divider cal-right-divider"></div>
+
+            <div id="cal-right-form-wrapper">
+                <div class="cal-input-main-row">
+                    <input type="text" id="cal-special-input" placeholder="Add title..." maxlength="60" spellcheck="false" autocomplete="off" readonly aria-label="Special day title">
+                    <button type="button" id="cal-special-add-btn" title="Save Entry">+</button>
+                </div>
+
+                <div class="cal-type-chips" id="cal-type-chips">
+                    <button type="button" class="cal-type-chip active" data-type="event">Event</button>
+                    <button type="button" class="cal-type-chip" data-type="task">Task</button>
+                    <button type="button" class="cal-type-chip" data-type="reminder">Reminder</button>
+                    <button type="button" class="cal-type-chip" data-type="memo">Memo</button>
+                    <button type="button" class="cal-type-chip" data-type="dday">D-Day</button>
+                </div>
+
+                <div id="cal-subfields-container"></div>
+            </div>
+
+            <div id="cal-right-events-list"></div>
+        </div>
     </div>
 </div>
 
@@ -115,8 +211,9 @@
 <div id="media-container">
     <div id="media-wrapper">
         <div id="media-image">
-            <i id="switch-menu"><img src="assets/icons/icons8-playlist-32.png"></i>
-            <i id="settings-menu"><img src="assets/icons/icons8-wrench-32.png"></i>
+            <i id="switch-menu"><img src="assets/icons/icons8-playlist-32.png" alt="Playlist Menu"></i>
+            <i id="settings-menu"><img src="assets/icons/icons8-wrench-32.png" alt="Settings Menu"></i>
+            <i id="resync-menu" title="Re-sync Media"><img src="assets/icons/icons8-refresh-32.png" alt="Resync Media"></i>
             <div id="timer-menu" class="hide-timer">
                 <span id="timer-text">60</span>
             </div>
@@ -157,24 +254,24 @@
                     <div id="time-elapsed">--:--</div>
                     <div id="song-duration">--:--</div>
                 </div>
-                <input type="range" id="media-slider" min="0" max="100">
+                <input type="range" id="media-slider" min="0" max="100" aria-label="Playback progress">
             </div>
 
             <div id="media-buttons">
                 <i id="media-info"></i>
-                <i id="media-previous"><img src="assets/icons/icons8-skip-to-start-16.png"></i>
-                <i id="media-play"><img src="assets/icons/icons8-play-16.png"></i>
-                <i id="media-pause" class="hide-pause-play"><img src="assets/icons/icons8-pause-16.png"></i>
-                <i id="media-next"><img src="assets/icons/icons8-end-16.png"></i>
+                <i id="media-previous"><img src="assets/icons/icons8-skip-to-start-16.png" alt="Previous Track"></i>
+                <i id="media-play"><img src="assets/icons/icons8-play-16.png" alt="Play"></i>
+                <i id="media-pause" class="hide-pause-play"><img src="assets/icons/icons8-pause-16.png" alt="Pause"></i>
+                <i id="media-next"><img src="assets/icons/icons8-end-16.png" alt="Next Track"></i>
                 <i id="media-repeat"></i>
             </div>
         </div>
 
         <div id="media-playlist" class="hide-properties">
             <div class="media-header">
-                <i><img src="assets/icons/icons8-back-16.png" id="media-left"></i>
-                <p>Inabakumori Songs</p>
-                <i><img src="assets/icons/icons8-forward-16.png" id="media-right"></i>
+                <i><img src="assets/icons/icons8-back-16.png" id="media-left" alt="Previous Page"></i>
+                <p spellcheck="false">Inabakumori Songs</p>
+                <i><img src="assets/icons/icons8-forward-16.png" id="media-right" alt="Next Page"></i>
             </div>
             <div id="media-playlist-list"></div>
         </div>
@@ -214,7 +311,6 @@
 <!-- ==========================================================================
    7. SCRIPTS
    ========================================================================== -->
-<script src="https://kit.fontawesome.com/b9c1de485e.js" crossorigin="anonymous"></script>
 <script src="jsmediatags.min.js"></script>
 <script src="main.js"></script>
 <script src="calendar-days.js"></script>

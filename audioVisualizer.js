@@ -29,9 +29,9 @@ function lerp(current, target, smoothness) {
     return current + (target - current) * smoothness;
 }
 
-if (window.wallpaperRegisterAudioListener) {
-    window.wallpaperRegisterAudioListener((audioArray) => {
-        if (window.isVisualizerEnabled === false) {
+if (window['wallpaperRegisterAudioListener']) {
+    window['wallpaperRegisterAudioListener']((audioArray) => {
+        if (!window.isVisualizerEnabled) {
             context.clearRect(0, 0, window.innerWidth, window.innerHeight);
             return;
         }
@@ -51,11 +51,11 @@ if (window.wallpaperRegisterAudioListener) {
             let height = barHeightMax * Math.min(audioArray[i], 1) * sensitivity;
             if (height >= barHeightMax) height = 500;
             let offset = 0;
-            if (audiovisualizerdirection == 1) {
+            if (audiovisualizerdirection === 1) {
                 offset = 0;
-            } else if (audiovisualizerdirection == 2) {
+            } else if (audiovisualizerdirection === 2) {
                 offset = height;
-            } else if (audiovisualizerdirection == 3) {
+            } else if (audiovisualizerdirection === 3) {
                 offset = height / 2;
             }
 
@@ -76,11 +76,11 @@ if (window.wallpaperRegisterAudioListener) {
                 let height = barHeightMax * Math.min(audioArray[i], 1) * sensitivity;
                 if (height >= barHeightMax) height = 500;
                 let offset = 0;
-                if (audiovisualizerdirection == 1) {
+                if (audiovisualizerdirection === 1) {
                     offset = 0;
-                } else if (audiovisualizerdirection == 2) {
+                } else if (audiovisualizerdirection === 2) {
                     offset = height;
-                } else if (audiovisualizerdirection == 3) {
+                } else if (audiovisualizerdirection === 3) {
                     offset = height / 2;
                 }
 

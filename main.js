@@ -184,7 +184,7 @@ document.addEventListener("mousemove", (event) => {
         mouse.y = event.clientY;
         if (mouse.firstX && mouse.firstY) {
             let mouseMove = mouse.firstX - mouse.x;
-            let newPercent = mouseMove / (window.innerWidth / 1);
+            let newPercent = mouseMove / (window.innerWidth);
 
             scrollPercent = newPercent + lastPercent;
 

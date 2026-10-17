@@ -19,7 +19,6 @@ function updateTime() {
     let minutes = date.getMinutes();
     let day = date.getDate();
     let year = date.getFullYear();
-    let month = "";
     let monthNumber = date.getMonth() + 1;
 
     if (minutes < 10) {
@@ -42,13 +41,13 @@ function updateTime() {
         "Wednesday", "Thursday", "Friday", "Saturday"
     ];
 
-    month = months[monthNumber - 1];
+    let month = months[monthNumber - 1];
     dateDisplay.innerHTML = weekday[date.getDay()] + ", " + month + " " + day + ", " + year;
     dateDisplay1.innerHTML = weekday[date.getDay()] + ", " + month + " " + day + ", " + year;
 
     if (!updateTime.updatedDate) {
         if (typeof updateCalendar === 'function') {
-            updateCalendar(day, monthNumber - 1, year, date.getDay());
+            updateCalendar(day, monthNumber - 1, year);
         }
         updateTime.updatedDate = true;
     }

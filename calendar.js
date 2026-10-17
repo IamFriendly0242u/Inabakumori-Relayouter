@@ -16,6 +16,7 @@ let calCloseBtn = document.getElementById('cal-close-btn');
 let calScrollUp = document.getElementById('cal-scroll-up');
 let calScrollDown = document.getElementById('cal-scroll-down');
 let calPanelRight = document.getElementById('calendar-panel-right');
+let calBody = document.getElementById('calendar-body');
 
 let calPanelTop = document.getElementById('cal-panel-top');
 let calPanelTime = document.getElementById('panel-time');
@@ -23,6 +24,23 @@ let calSelectedDayName = document.getElementById('cal-selected-day-name');
 let calSelectedDateDisplay = document.getElementById('cal-selected-date-display');
 let calEventsList = document.getElementById('cal-events-list');
 let calTimeDisplayBottom = document.getElementById('timeDisplay');
+
+let calRightDateDisplay = document.getElementById('cal-right-date-display');
+let calRightCountBadge = document.getElementById('cal-right-count-badge');
+let calSpecialInput = document.getElementById('cal-special-input');
+let calSpecialAddBtn = document.getElementById('cal-special-add-btn');
+let calTypeChips = document.getElementById('cal-type-chips');
+let calSubfieldsContainer = document.getElementById('cal-subfields-container');
+let calRightEventsList = document.getElementById('cal-right-events-list');
+
+let calVkCloseBtn = document.getElementById('cal-vk-close');
+let calVkBackspace = document.getElementById('cal-vk-backspace');
+let calVkCaps = document.getElementById('cal-vk-caps');
+let calVkClear = document.getElementById('cal-vk-clear');
+let calVkLeft = document.getElementById('cal-vk-left');
+let calVkRight = document.getElementById('cal-vk-right');
+let calVkSpace = document.getElementById('cal-vk-space');
+let calVkDone = document.getElementById('cal-vk-done');
 
 let pageSelectorNav = document.getElementById('pageSelector');
 
@@ -40,6 +58,9 @@ let calScrollAnimation = null;
 let calSelectedDayElement = null;
 let calBtnTimeout = null;
 let calFadeDebounce = null;
+
+let calActiveCategoryType = 'event';
+let calIsCapsLock = false;
 
 let eventMarqueeHandles = [];
 
@@ -185,7 +206,12 @@ async function loadNationalHolidays(year) {
         const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`, { signal: controller.signal });
         clearTimeout(timeout);
 
-        if (!res.ok) throw new Error("Failed HTTP status " + res.status);
+        if (!res.ok) {
+            calHolidayFetchStatus = "error";
+            calHolidayFetchErrorMsg = "Unable to fetch national calendar. Check your network connection.";
+            applySmartDefaultView();
+            return;
+        }
 
         const data = await res.json();
         const mapped = {};
@@ -525,7 +551,7 @@ function renderCurrentViewContent(isManualSwitch = false) {
                     </div>
                 </div>
                 <div class="event-badge" title="${iconTitle}">
-                    <img src="${iconSrc}">
+                    <img src="${iconSrc}" alt="${iconTitle}">
                 </div>
             `;
 
@@ -581,6 +607,8 @@ function updateLeftPanelData(dayNumber, dateObj, isPanelAlreadyOpen = false) {
    3. NAVIGATION EVENT LISTENERS & AUTO RESET
    ========================================================================== */
 
+let calIsKeyboardAnimating = false;
+
 function isLeftPanelOpen() {
     return calPanelLeft && !calPanelLeft.classList.contains('hide-panel');
 }
@@ -601,10 +629,12 @@ function openRightPanel() {
         calCloseBtn.innerHTML = '&lt;';
     }
     updateScrollButtonsVisibility();
+    renderRightPanelContent();
 }
 
 function closeRightPanel() {
     if (!calPanelRight) return;
+    closeCalendarKeyboard();
     calIsRightPanelOpen = false;
     calPanelRight.classList.add('hide-panel');
 
@@ -615,6 +645,415 @@ function closeRightPanel() {
         calCloseBtn.innerHTML = '&gt;';
     }
     setTimeout(updateScrollButtonsVisibility, 300);
+
+    applySmartDefaultView();
+}
+
+function renderRightPanelContent() {
+    if (!calPanelRight) return;
+
+    if (!calRightDateDisplay) calRightDateDisplay = document.getElementById('cal-right-date-display');
+    if (!calRightCountBadge) calRightCountBadge = document.getElementById('cal-right-count-badge');
+    if (!calSpecialInput) calSpecialInput = document.getElementById('cal-special-input');
+    if (!calTypeChips) calTypeChips = document.getElementById('cal-type-chips');
+    if (!calSubfieldsContainer) calSubfieldsContainer = document.getElementById('cal-subfields-container');
+    if (!calRightEventsList) calRightEventsList = document.getElementById('cal-right-events-list');
+
+    const monthName = calMonthNames[calActiveDateObj.getMonth()];
+    const dayNumber = calActiveDayNum;
+    const yearNum = calActiveDateObj.getFullYear();
+    const monthNum = calActiveDateObj.getMonth() + 1;
+
+    if (calRightDateDisplay) {
+        calRightDateDisplay.textContent = `${monthName} ${dayNumber}, ${yearNum}`;
+    }
+
+    if (calSpecialInput) {
+        calSpecialInput.value = '';
+    }
+
+    renderCategoryChipsUI();
+    renderSubfieldsUI();
+    renderRightEventsList(monthNum, dayNumber);
+}
+
+function renderCategoryChipsUI() {
+    if (!calTypeChips) calTypeChips = document.getElementById('cal-type-chips');
+    if (!calTypeChips) return;
+
+    calTypeChips.querySelectorAll('.cal-type-chip').forEach(chip => {
+        const type = chip.getAttribute('data-type');
+        chip.classList.toggle('active', type === calActiveCategoryType);
+
+        chip.onclick = (e) => {
+            e.stopPropagation();
+            calActiveCategoryType = type;
+            renderCategoryChipsUI();
+            renderSubfieldsUI();
+        };
+    });
+}
+
+function renderSubfieldsUI() {
+    if (!calSubfieldsContainer) calSubfieldsContainer = document.getElementById('cal-subfields-container');
+    if (!calSubfieldsContainer) return;
+    calSubfieldsContainer.innerHTML = '';
+
+    if (calActiveCategoryType === 'task') {
+        calSubfieldsContainer.innerHTML = `
+            <div class="cal-subfield-row cal-subfield-note">
+                <span>Task item with interactive checklist</span>
+            </div>
+        `;
+    } else if (calActiveCategoryType === 'reminder') {
+        calSubfieldsContainer.innerHTML = `
+            <div class="cal-subfield-row">
+                <span>Time:</span>
+                <input type="time" id="cal-sub-time" value="12:00">
+            </div>
+        `;
+    } else if (calActiveCategoryType === 'memo') {
+        calSubfieldsContainer.innerHTML = `
+            <div class="cal-subfield-row cal-subfield-note">
+                <span>Freeform daily memo or note</span>
+            </div>
+        `;
+    } else if (calActiveCategoryType === 'dday') {
+        calSubfieldsContainer.innerHTML = `
+            <div class="cal-subfield-row cal-subfield-note">
+                <span>Calculates live D-Day countdown from today</span>
+            </div>
+        `;
+    }
+}
+
+function calculateDDayBadge(dateObj) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const target = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    target.setHours(0, 0, 0, 0);
+
+    const diffMs = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'D-DAY';
+    if (diffDays > 0) return `D-${diffDays}`;
+    return `D+${Math.abs(diffDays)}`;
+}
+
+function renderRightEventsList(monthNum, dayNumber) {
+    if (!calRightEventsList) calRightEventsList = document.getElementById('cal-right-events-list');
+    if (!calRightCountBadge) calRightCountBadge = document.getElementById('cal-right-count-badge');
+    if (!calRightEventsList) return;
+    calRightEventsList.innerHTML = '';
+
+    const specialDays = getStoredSpecialDays(monthNum, dayNumber);
+    const count = specialDays ? specialDays.length : 0;
+
+    if (calRightCountBadge) {
+        if (count === 1) {
+            calRightCountBadge.textContent = '1 EVENT SCHEDULED';
+        } else if (count > 1) {
+            calRightCountBadge.textContent = `${count} EVENTS SCHEDULED`;
+        } else {
+            calRightCountBadge.textContent = '0 EVENTS SCHEDULED';
+        }
+    }
+
+    if (specialDays && specialDays.length > 0) {
+        specialDays.forEach((evt, idx) => {
+            const div = document.createElement('div');
+            div.className = 'special-event-item';
+
+            const itemType = (typeof evt === 'object' && evt.type) ? evt.type : 'event';
+            const eventName = (typeof evt === 'object' && evt.name) ? evt.name : evt;
+            const isDone = (typeof evt === 'object' && evt.done);
+
+            if (itemType === 'task' && isDone) {
+                div.classList.add('task-done');
+            }
+
+            let badgeHtml = '';
+            let leadHtml = '';
+
+            if (itemType === 'task') {
+                leadHtml = `<input type="checkbox" class="special-task-checkbox" ${isDone ? 'checked' : ''}>`;
+            } else if (itemType === 'dday') {
+                const ddayText = calculateDDayBadge(calActiveDateObj);
+                badgeHtml = `<span class="special-pill-badge pill-dday">${ddayText}</span>`;
+            } else if (itemType === 'reminder') {
+                const timeStr = evt.time || '12:00';
+                badgeHtml = `<span class="special-pill-badge pill-reminder">${timeStr}</span>`;
+            } else if (itemType === 'memo') {
+                badgeHtml = `<span class="special-pill-badge pill-memo">MEMO</span>`;
+            } else {
+                badgeHtml = `<span class="special-pill-badge pill-event">EVENT</span>`;
+            }
+
+            div.innerHTML = `
+                ${leadHtml}
+                <div class="event-text-wrapper">
+                    ${badgeHtml}
+                    <div class="event-text-track">
+                        <span>${eventName}</span>
+                    </div>
+                </div>
+                <button type="button" class="special-event-del-btn" title="Delete entry">✕</button>
+            `;
+
+            const chk = div.querySelector('.special-task-checkbox');
+            if (chk) {
+                chk.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleTaskDone(monthNum, dayNumber, idx);
+                });
+            }
+
+            const delBtn = div.querySelector('.special-event-del-btn');
+            if (delBtn) {
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSpecialDay(monthNum, dayNumber, idx);
+                });
+            }
+
+            calRightEventsList.appendChild(div);
+
+            const wrapper = div.querySelector('.event-text-wrapper');
+            const track = div.querySelector('.event-text-track');
+            createEventMarquee(wrapper, track, eventName, 1000 + idx, 0.1);
+        });
+    } else {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'special-no-event';
+        emptyDiv.textContent = 'No special days recorded for this date.';
+        calRightEventsList.appendChild(emptyDiv);
+    }
+}
+
+function toggleCalendarKeyboard() {
+    if (calIsKeyboardAnimating) return;
+    calIsKeyboardAnimating = true;
+
+    if (!calBody) calBody = document.getElementById('calendar-body');
+    if (calBody && calBody.classList.contains('keyboard-open')) {
+        closeCalendarKeyboard();
+    } else {
+        openCalendarKeyboard();
+    }
+
+    setTimeout(() => {
+        calIsKeyboardAnimating = false;
+    }, 350);
+}
+
+function openCalendarKeyboard() {
+    if (!calBody) calBody = document.getElementById('calendar-body');
+    if (!calSpecialInput) calSpecialInput = document.getElementById('cal-special-input');
+    if (calBody) calBody.classList.add('keyboard-open');
+    if (calSpecialInput) calSpecialInput.classList.add('input-focused');
+    updateCalKeyboardCapsUI();
+}
+
+function closeCalendarKeyboard() {
+    if (!calBody) calBody = document.getElementById('calendar-body');
+    if (!calSpecialInput) calSpecialInput = document.getElementById('cal-special-input');
+    if (calBody) calBody.classList.remove('keyboard-open');
+    if (calSpecialInput) calSpecialInput.classList.remove('input-focused');
+}
+
+function updateCalKeyboardCapsUI() {
+    document.querySelectorAll('#cal-virtual-keyboard .cal-vk-key[data-key]').forEach(btn => {
+        const keyVal = btn.getAttribute('data-key');
+        if (/^[a-zA-Z]$/.test(keyVal)) {
+            const transformed = calIsCapsLock ? keyVal.toUpperCase() : keyVal.toLowerCase();
+            btn.setAttribute('data-key', transformed);
+            btn.textContent = transformed;
+        }
+    });
+
+    if (calVkCaps) {
+        calVkCaps.classList.toggle('active', calIsCapsLock);
+    }
+}
+
+if (calSpecialInput) {
+    calSpecialInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleCalendarKeyboard();
+    });
+}
+
+if (calVkCloseBtn) calVkCloseBtn.addEventListener('click', closeCalendarKeyboard);
+if (calVkDone) calVkDone.addEventListener('click', closeCalendarKeyboard);
+
+if (calVkCaps) {
+    calVkCaps.addEventListener('click', (e) => {
+        e.stopPropagation();
+        calIsCapsLock = !calIsCapsLock;
+        updateCalKeyboardCapsUI();
+    });
+}
+
+if (calVkLeft) {
+    calVkLeft.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!calSpecialInput) return;
+        const start = calSpecialInput.selectionStart || 0;
+        const newPos = Math.max(0, start - 1);
+        calSpecialInput.setSelectionRange(newPos, newPos);
+    });
+}
+
+if (calVkRight) {
+    calVkRight.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!calSpecialInput) return;
+        const end = calSpecialInput.selectionEnd || 0;
+        const newPos = Math.min(calSpecialInput.value.length, end + 1);
+        calSpecialInput.setSelectionRange(newPos, newPos);
+    });
+}
+
+document.querySelectorAll('#cal-virtual-keyboard .cal-vk-key[data-key]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!calSpecialInput) return;
+
+        const char = btn.getAttribute('data-key');
+        const start = calSpecialInput.selectionStart || calSpecialInput.value.length;
+        const end = calSpecialInput.selectionEnd || calSpecialInput.value.length;
+        const val = calSpecialInput.value;
+
+        calSpecialInput.value = val.slice(0, start) + char + val.slice(end);
+        calSpecialInput.setSelectionRange(start + char.length, start + char.length);
+    });
+});
+
+if (calVkBackspace) {
+    calVkBackspace.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!calSpecialInput || calSpecialInput.value.length === 0) return;
+
+        const start = calSpecialInput.selectionStart || calSpecialInput.value.length;
+        const end = calSpecialInput.selectionEnd || calSpecialInput.value.length;
+        const val = calSpecialInput.value;
+
+        if (start === end && start > 0) {
+            calSpecialInput.value = val.slice(0, start - 1) + val.slice(end);
+            calSpecialInput.setSelectionRange(start - 1, start - 1);
+        } else if (start !== end) {
+            calSpecialInput.value = val.slice(0, start) + val.slice(end);
+            calSpecialInput.setSelectionRange(start, start);
+        }
+    });
+}
+
+if (calVkSpace) {
+    calVkSpace.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!calSpecialInput) return;
+
+        const start = calSpecialInput.selectionStart || calSpecialInput.value.length;
+        const end = calSpecialInput.selectionEnd || calSpecialInput.value.length;
+        const val = calSpecialInput.value;
+
+        calSpecialInput.value = val.slice(0, start) + ' ' + val.slice(end);
+        calSpecialInput.setSelectionRange(start + 1, start + 1);
+    });
+}
+
+if (calVkClear) {
+    calVkClear.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!calSpecialInput) return;
+        calSpecialInput.value = '';
+    });
+}
+
+function addSpecialDay() {
+    if (!calSpecialInput) calSpecialInput = document.getElementById('cal-special-input');
+    if (!calSpecialInput) return;
+
+    const text = calSpecialInput.value.trim();
+    if (!text) return;
+
+    const monthNum = calActiveDateObj.getMonth() + 1;
+    const dayNumber = calActiveDayNum;
+    const key = `${monthNum}-${dayNumber}`;
+
+    let timeVal = '';
+    const inputTime = document.getElementById('cal-sub-time');
+    if (inputTime && calActiveCategoryType === 'reminder') {
+        timeVal = inputTime.value || '12:00';
+    }
+
+    try {
+        let store = {};
+        const raw = localStorage.getItem("osage_custom_special_days");
+        if (raw) {
+            store = JSON.parse(raw) || {};
+        }
+        if (!Array.isArray(store[key])) {
+            store[key] = [];
+        }
+        store[key].push({
+            id: Date.now(),
+            name: text,
+            type: calActiveCategoryType,
+            time: timeVal,
+            done: false,
+            official: false
+        });
+        localStorage.setItem("osage_custom_special_days", JSON.stringify(store));
+    } catch (e) {}
+
+    calSpecialInput.value = '';
+    closeCalendarKeyboard();
+    renderRightEventsList(monthNum, dayNumber);
+}
+
+function toggleTaskDone(monthNum, dayNumber, index) {
+    const key = `${monthNum}-${dayNumber}`;
+    try {
+        const raw = localStorage.getItem("osage_custom_special_days");
+        if (raw) {
+            const store = JSON.parse(raw) || {};
+            if (Array.isArray(store[key]) && store[key][index]) {
+                store[key][index].done = !store[key][index].done;
+                localStorage.setItem("osage_custom_special_days", JSON.stringify(store));
+            }
+        }
+    } catch (e) {}
+
+    renderRightEventsList(monthNum, dayNumber);
+}
+
+function deleteSpecialDay(monthNum, dayNumber, index) {
+    const key = `${monthNum}-${dayNumber}`;
+    try {
+        const raw = localStorage.getItem("osage_custom_special_days");
+        if (raw) {
+            const store = JSON.parse(raw) || {};
+            if (Array.isArray(store[key])) {
+                store[key].splice(index, 1);
+                if (store[key].length === 0) {
+                    delete store[key];
+                }
+                localStorage.setItem("osage_custom_special_days", JSON.stringify(store));
+            }
+        }
+    } catch (e) {}
+
+    renderRightEventsList(monthNum, dayNumber);
+}
+
+if (calSpecialAddBtn) {
+    calSpecialAddBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addSpecialDay();
+    });
 }
 
 function closeBothPanels(force = false) {
@@ -622,6 +1061,7 @@ function closeBothPanels(force = false) {
     calIsPanelAnimating = true;
     if (calBtnTimeout) clearTimeout(calBtnTimeout);
 
+    closeCalendarKeyboard();
     stopEventMarquees();
 
     if (calContentLoadTimeout) {
@@ -818,7 +1258,7 @@ function triggerMonthChange(delta) {
     }
 
     if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
-    if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+    if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
 
     if (calDaysWrapper) calDaysWrapper.classList.add('fading');
     if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
@@ -827,7 +1267,7 @@ function triggerMonthChange(delta) {
 
     calFadeDebounce = setTimeout(() => {
         let wasPanelOpen = isLeftPanelOpen();
-        loadNationalHolidays(calActiveYear);
+        void loadNationalHolidays(calActiveYear);
         renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
 
         if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
@@ -853,7 +1293,7 @@ function resetCalendarToCurrentDate() {
         calActiveYear = realYear;
 
         if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
-        if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+        if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
 
         if (calDaysWrapper) calDaysWrapper.classList.add('fading');
         if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -861,7 +1301,7 @@ function resetCalendarToCurrentDate() {
         if (calFadeDebounce) clearTimeout(calFadeDebounce);
 
         calFadeDebounce = setTimeout(() => {
-            loadNationalHolidays(calActiveYear);
+            void loadNationalHolidays(calActiveYear);
             renderCalendar();
             if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
             if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -948,7 +1388,7 @@ function scrollToYear(year, duration = 500) {
     let targetItem = null;
 
     items.forEach(el => {
-        let rawYear = parseInt(el.getAttribute('data-year'));
+        let rawYear = parseInt(el.getAttribute('data-year'), 10);
         if (rawYear === year) {
             el.classList.add('active-year');
             targetItem = el;
@@ -975,7 +1415,7 @@ if (calPrevBtn) {
         if (calIsContentLoading) return;
         if (calIsYearPickerOpen) {
             calActiveYear--;
-            if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+            if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
             scrollToYear(calActiveYear, 500);
         } else {
             triggerMonthChange(-1);
@@ -989,7 +1429,7 @@ if (calNextBtn) {
         if (calIsContentLoading) return;
         if (calIsYearPickerOpen) {
             calActiveYear++;
-            if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+            if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
             scrollToYear(calActiveYear, 500);
         } else {
             triggerMonthChange(1);
@@ -1011,7 +1451,7 @@ if (calMonthDisplay) {
                 calActiveYear = now.getFullYear();
 
                 if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
-                if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+                if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
 
                 if (calDaysWrapper) calDaysWrapper.classList.add('fading');
                 if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
@@ -1019,7 +1459,7 @@ if (calMonthDisplay) {
                 if (calFadeDebounce) clearTimeout(calFadeDebounce);
 
                 calFadeDebounce = setTimeout(() => {
-                    loadNationalHolidays(calActiveYear);
+                    void loadNationalHolidays(calActiveYear);
                     renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
                     if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
                     if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -1032,7 +1472,7 @@ if (calMonthDisplay) {
             calActiveYear = now.getFullYear();
 
             if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
-            if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
+            if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
 
             if (calDaysWrapper) calDaysWrapper.classList.add('fading');
             if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -1040,7 +1480,7 @@ if (calMonthDisplay) {
             if (calFadeDebounce) clearTimeout(calFadeDebounce);
 
             calFadeDebounce = setTimeout(() => {
-                loadNationalHolidays(calActiveYear);
+                void loadNationalHolidays(calActiveYear);
                 renderCalendar(wasPanelOpen ? getAutoTargetDay() : null);
                 if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
                 if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
@@ -1051,7 +1491,7 @@ if (calMonthDisplay) {
 }
 
 if (calYearDisplay) {
-    calYearDisplay.innerHTML = calActiveYear;
+    calYearDisplay.innerHTML = String(calActiveYear);
     calYearDisplay.addEventListener('click', (evt) => {
         evt.stopPropagation();
         if (calIsTransitioning || calIsContentLoading) return;
@@ -1063,90 +1503,122 @@ if (calYearDisplay) {
     });
 }
 
-loadNationalHolidays(calActiveYear);
+void loadNationalHolidays(calActiveYear);
 
 
 /* ==========================================================================
-   4. TRANSITION HELPERS & YEAR PICKER LOGIC
+   4. YEAR PICKER ENGINE
    ========================================================================== */
 
-function toggleYearPicker(show, onComplete) {
-    if (calIsTransitioning) return;
-    calIsTransitioning = true;
-    calIsYearPickerOpen = show;
+const CAL_MIN_YEAR = 1970;
+const CAL_MAX_YEAR = 2099;
 
-    if (show) {
-        if (calDaysWrapper) calDaysWrapper.classList.add('fading');
-        if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
+let yearScrollDebounce = null;
 
-        setTimeout(() => {
-            renderYearsList();
-            if (calYearsWrapper) calYearsWrapper.classList.remove('hide-years');
-            if (onComplete) onComplete();
-
-            setTimeout(() => {
-                calIsTransitioning = false;
-            }, 750);
-        }, 750);
-    } else {
-        if (calYearsWrapper) calYearsWrapper.classList.add('hide-years');
-
-        setTimeout(() => {
-            renderCalendar();
-            if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
-            if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
-            if (onComplete) onComplete();
-
-            setTimeout(() => {
-                calIsTransitioning = false;
-            }, 750);
-        }, 750);
-    }
-}
-
-function renderYearsList() {
+function initYearPicker() {
     if (!calYearsList) return;
     calYearsList.innerHTML = '';
 
-    let startYear = calActiveYear - 30;
-    let endYear = calActiveYear + 30;
-
-    for (let y = startYear; y <= endYear; y++) {
+    for (let y = CAL_MIN_YEAR; y <= CAL_MAX_YEAR; y++) {
         let item = document.createElement('div');
-        item.classList.add('year-item');
-        item.setAttribute('data-year', y);
-        item.innerHTML = y;
+        item.className = 'year-item';
+        item.setAttribute('data-year', String(y));
+        item.textContent = String(y);
 
-        if (y === calActiveYear) {
-            item.classList.add('active-year');
-        }
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (calIsTransitioning || calIsContentLoading) return;
 
-        item.addEventListener('click', (evt) => {
-            evt.stopPropagation();
-            evt.preventDefault();
-            if (calIsTransitioning) return;
-
-            if (calActiveYear === y) {
+            if (y === calActiveYear) {
                 calActiveMonth = 0;
-                toggleYearPicker(false);
+                calActiveDayNum = 1;
+                calActiveDateObj = new Date(calActiveYear, 0, 1);
+
+                if (calMonthDisplay) calMonthDisplay.innerHTML = calMonthNames[calActiveMonth];
+
+                toggleYearPicker(false, () => {
+                    let wasPanelOpen = isLeftPanelOpen();
+                    void loadNationalHolidays(calActiveYear);
+                    renderCalendar(wasPanelOpen ? 1 : null);
+                });
             } else {
                 calActiveYear = y;
-                if (calYearDisplay) calYearDisplay.innerHTML = calActiveYear;
-                scrollToYear(calActiveYear, 500);
+                if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
+                scrollToYear(calActiveYear, 350);
             }
         });
 
         calYearsList.appendChild(item);
     }
 
-    requestAnimationFrame(() => {
-        let activeItem = calYearsList.querySelector('.active-year');
-        if (activeItem && calYearsList) {
-            let targetScroll = activeItem.offsetTop - (calYearsList.clientHeight / 2) + (activeItem.clientHeight / 2);
-            calYearsList.scrollTop = targetScroll;
-        }
+    calYearsList.addEventListener('scroll', () => {
+        if (calScrollAnimation) return;
+        if (yearScrollDebounce) clearTimeout(yearScrollDebounce);
+
+        yearScrollDebounce = setTimeout(() => {
+            const centerY = calYearsList.scrollTop + (calYearsList.clientHeight / 2);
+            let closestItem = null;
+            let minDiff = Infinity;
+
+            calYearsList.querySelectorAll('.year-item').forEach(el => {
+                const itemCenter = el.offsetTop + (el.clientHeight / 2);
+                const diff = Math.abs(centerY - itemCenter);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestItem = el;
+                }
+            });
+
+            if (closestItem) {
+                const y = parseInt(closestItem.getAttribute('data-year'), 10);
+                if (y && y !== calActiveYear) {
+                    calActiveYear = y;
+                    if (calYearDisplay) calYearDisplay.innerHTML = String(calActiveYear);
+                    calYearsList.querySelectorAll('.year-item').forEach(el => {
+                        el.classList.toggle('active-year', parseInt(el.getAttribute('data-year'), 10) === y);
+                    });
+                }
+            }
+        }, 50);
     });
 }
+
+function toggleYearPicker(open, callback = null) {
+    if (!calYearsWrapper || calIsTransitioning) return;
+    calIsTransitioning = true;
+    calIsYearPickerOpen = open;
+
+    if (calYearsList && calYearsList.children.length === 0) {
+        initYearPicker();
+    }
+
+    if (open) {
+        closeCalendarKeyboard();
+        if (calDaysWrapper) calDaysWrapper.classList.add('fading');
+        if (calWeekdaysHeader) calWeekdaysHeader.classList.add('fading');
+        calYearsWrapper.classList.remove('hide-years');
+
+        setTimeout(() => {
+            scrollToYear(calActiveYear, 300);
+        }, 50);
+
+        setTimeout(() => {
+            calIsTransitioning = false;
+            if (typeof callback === 'function') callback();
+        }, 400);
+    } else {
+        calYearsWrapper.classList.add('hide-years');
+        if (calDaysWrapper) calDaysWrapper.classList.remove('fading');
+        if (calWeekdaysHeader) calWeekdaysHeader.classList.remove('fading');
+
+        setTimeout(() => {
+            calIsTransitioning = false;
+            if (typeof callback === 'function') callback();
+        }, 400);
+    }
+}
+
+initYearPicker();
 
 
 /* ==========================================================================
@@ -1162,7 +1634,7 @@ function renderCalendar(autoSelectDay = null) {
     }
 
     if (calYearDisplay) {
-        calYearDisplay.innerHTML = calActiveYear;
+        calYearDisplay.innerHTML = String(calActiveYear);
     }
 
     let today = new Date();
@@ -1195,15 +1667,15 @@ function renderCalendar(autoSelectDay = null) {
     beforeDays.forEach(day => {
         let e = document.createElement('div');
         e.classList.add('beforeDays');
-        e.innerHTML = day;
+        e.innerHTML = String(day);
         calDaysWrapper.appendChild(e);
     });
 
     days.forEach(day => {
         let e = document.createElement('div');
         e.classList.add('valid-day');
-        e.innerHTML = day;
-        e.setAttribute('data-day', day);
+        e.innerHTML = String(day);
+        e.setAttribute('data-day', String(day));
 
         if (isCurrentMonth && day === todayDate) {
             e.classList.add('current-day');
@@ -1260,12 +1732,12 @@ function renderCalendar(autoSelectDay = null) {
     afterDays.forEach(day => {
         let e = document.createElement('div');
         e.classList.add('afterDays');
-        e.innerHTML = day;
+        e.innerHTML = String(day);
         calDaysWrapper.appendChild(e);
     });
 }
 
-function updateCalendar(currentDay, month, year, weekday) {
+function updateCalendar(currentDay, month, year) {
     calActiveMonth = month;
     calActiveYear = year;
     renderCalendar();

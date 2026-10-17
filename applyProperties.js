@@ -16,7 +16,7 @@ if (localStorage.getItem('we_musicvolume') !== null) {
    ========================================================================== */
 
 window.wallpaperPropertyListener = {
-    applyUserProperties: function(properties) {
+    ['applyUserProperties']: function(properties) {
         if (properties.backgroundbrightness) {
             localStorage.setItem('we_backgroundbrightness', properties.backgroundbrightness.value);
             if (typeof background !== 'undefined' && background) {
@@ -60,6 +60,6 @@ window.wallpaperPropertyListener = {
    3. MEDIA PLAYBACK INTEGRATION LISTENER
    ========================================================================== */
 
-if (window.wallpaperRegisterMediaPlaybackListener && typeof wallpaperMediaPlaybackListener === 'function') {
-    window.wallpaperRegisterMediaPlaybackListener(wallpaperMediaPlaybackListener);
+if (window['wallpaperRegisterMediaPlaybackListener'] && typeof window['wallpaperMediaPlaybackListener'] === 'function') {
+    window['wallpaperRegisterMediaPlaybackListener'](window['wallpaperMediaPlaybackListener']);
 }

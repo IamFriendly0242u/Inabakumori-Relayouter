@@ -4,13 +4,11 @@
 
 let switchMenu = document.getElementById('switch-menu');
 let settingsMenu = document.getElementById('settings-menu');
+let resyncMenu = document.getElementById('resync-menu');
 let mediaProperties = document.getElementById('media-properties');
 let mediaPlaylist = document.getElementById('media-playlist');
 let mediaPlaylistList = document.getElementById('media-playlist-list');
 let imageDisplay = document.getElementById('media-image');
-let albumDisplay = document.getElementById('media-album');
-let titleDisplay = document.getElementById('media-title');
-let artistDisplay = document.getElementById('media-artist');
 let yearDisplay = document.getElementById('media-release');
 let duration = document.getElementById('song-duration');
 let elapsedTime = document.getElementById('time-elapsed');
@@ -192,22 +190,22 @@ if (timerMenu) {
     });
 }
 
-const songGifs = {
-    '03. 『Pascal Beats』Vo. 歌愛ユキ.mp3': 'assets/gifs/03.gif',
-    '04. 『Cooler Girl』Vo. 歌愛ユキ.mp3': 'assets/gifs/04.gif',
-    '05. 『Loop Spinner』Vo. 歌愛ユキ.mp3': 'assets/gifs/05.gif',
-    '06. 『Namida Denpa』Vo. 歌愛ユキ.mp3': 'assets/gifs/06.gif',
-    '07. 『Tsukurikake no Shinshou』Vo. 歌愛ユキ.mp3': 'assets/gifs/07.gif',
-    '11. 『Utsushi Asobi』Vo. 歌愛ユキ.mp3': 'assets/gifs/11.gif',
-    '13. 『Non-Use』Vo. 歌愛ユキ & 初音ミク.mp3': 'assets/gifs/13.gif',
-    '14. 『Himitsu Ongaku』Vo. 歌愛ユキ.mp3': 'assets/gifs/14.gif',
-    '17. 『Rainy Boots』Vo. 歌愛ユキ.mp3': 'assets/gifs/17.gif',
-    '18. 『Lagtrain』Vo. 歌愛ユキ.mp3': 'assets/gifs/18.gif',
-    '25. 『Kimi ni Kaikisen』Vo. 歌愛ユキ.mp3': 'assets/gifs/25.gif',
-    '29. 『Float Play』Vo. 歌愛ユキ.mp3': 'assets/gifs/29.gif',
-    '34. 『Watashi wa Ame』Vo. 歌愛ユキ.mp3': 'assets/gifs/34.gif',
-    '39. 『Spot Late』Vo. 歌愛ユキ.mp3': 'assets/gifs/39.gif'
-};
+const songGifs = Object.fromEntries([
+    ['03. 『Pascal Beats』Vo. 歌愛ユキ.mp3', 'assets/gifs/03.gif'],
+    ['04. 『Cooler Girl』Vo. 歌愛ユキ.mp3', 'assets/gifs/04.gif'],
+    ['05. 『Loop Spinner』Vo. 歌愛ユキ.mp3', 'assets/gifs/05.gif'],
+    ['06. 『Namida Denpa』Vo. 歌愛ユキ.mp3', 'assets/gifs/06.gif'],
+    ['07. 『Tsukurikake no Shinshou』Vo. 歌愛ユキ.mp3', 'assets/gifs/07.gif'],
+    ['11. 『Utsushi Asobi』Vo. 歌愛ユキ.mp3', 'assets/gifs/11.gif'],
+    ['13. 『Non-Use』Vo. 歌愛ユキ & 初音ミク.mp3', 'assets/gifs/13.gif'],
+    ['14. 『Himitsu Ongaku』Vo. 歌愛ユキ.mp3', 'assets/gifs/14.gif'],
+    ['17. 『Rainy Boots』Vo. 歌愛ユキ.mp3', 'assets/gifs/17.gif'],
+    ['18. 『Lagtrain』Vo. 歌愛ユキ.mp3', 'assets/gifs/18.gif'],
+    ['25. 『Kimi ni Kaikisen』Vo. 歌愛ユキ.mp3', 'assets/gifs/25.gif'],
+    ['29. 『Float Play』Vo. 歌愛ユキ.mp3', 'assets/gifs/29.gif'],
+    ['34. 『Watashi wa Ame』Vo. 歌愛ユキ.mp3', 'assets/gifs/34.gif'],
+    ['39. 『Spot Late』Vo. 歌愛ユキ.mp3', 'assets/gifs/39.gif']
+]);
 
 
 /* ==========================================================================
@@ -238,8 +236,8 @@ function resolveAlbumDisplay(album, title) {
     let a = album.trim();
     let t = (title || "").trim();
 
-    let cleanA = a.toLowerCase().replace(/[\(\[\{【『].*?[\)\]\}】』]/g, '').trim();
-    let cleanT = t.toLowerCase().replace(/[\(\[\{【『].*?[\)\]\}】』]/g, '').trim();
+    let cleanA = a.toLowerCase().replace(/[[({【『].*?[\])}】』]/g, '').trim();
+    let cleanT = t.toLowerCase().replace(/[[({【『].*?[\])}】』]/g, '').trim();
 
     if (!cleanA || cleanA === cleanT || a.toLowerCase() === t.toLowerCase() || /^(single|single track|single-track)$/i.test(a)) {
         return "Single Track";
@@ -326,23 +324,18 @@ function isSpotifyMedia(coverUrl, appId) {
     let c = (coverUrl || "").toLowerCase();
     let app = (appId || "").toLowerCase();
 
-    if (app.includes("spotify") || c.includes("scdn.co") || c.includes("spotify")) {
-        return true;
-    }
-
-    if (!isYouTubeMedia(coverUrl, appId, "", "") && (c.startsWith("data:image") || c.includes("blob:"))) {
-        return true;
-    }
-
-    return false;
+    return app.includes("spotify") ||
+        c.includes("scdn.co") ||
+        c.includes("spotify") ||
+        (!isYouTubeMedia(coverUrl, appId, "", "") && (c.startsWith("data:image") || c.includes("blob:")));
 }
 
 function getCleanAppName() {
     return "APPs Connect";
 }
 
-if (window.wallpaperRegisterMediaPropertiesListener) {
-    window.wallpaperRegisterMediaPropertiesListener((event) => {
+if (window['wallpaperRegisterMediaPropertiesListener']) {
+    window['wallpaperRegisterMediaPropertiesListener']((event) => {
         let newTitle = event.title || "Unknown Title";
         let newArtist = event.artist || "Unknown Artist";
         let rawAlbum = event.subTitle || event.albumTitle || "";
@@ -360,8 +353,8 @@ if (window.wallpaperRegisterMediaPropertiesListener) {
     });
 }
 
-if (window.wallpaperRegisterMediaThumbnailListener) {
-    window.wallpaperRegisterMediaThumbnailListener((event) => {
+if (window['wallpaperRegisterMediaThumbnailListener']) {
+    window['wallpaperRegisterMediaThumbnailListener']((event) => {
         let rawCover = event.thumbnail || "assets/icons/inaba_512.png";
         systemMediaData.cover = getHDThumbnail(rawCover);
 
@@ -384,8 +377,8 @@ if (window.wallpaperRegisterMediaThumbnailListener) {
     });
 }
 
-if (window.wallpaperRegisterMediaTimelineListener) {
-    window.wallpaperRegisterMediaTimelineListener((event) => {
+if (window['wallpaperRegisterMediaTimelineListener']) {
+    window['wallpaperRegisterMediaTimelineListener']((event) => {
         let oldPos = systemMediaData.position;
         let newPos = event.position || 0;
         let timePassed = systemMediaData.lastUpdateTimestamp ? (Date.now() - systemMediaData.lastUpdateTimestamp) / 1000 : 0;
@@ -406,8 +399,8 @@ if (window.wallpaperRegisterMediaTimelineListener) {
     });
 }
 
-if (window.wallpaperRegisterMediaPlaybackListener) {
-    window.wallpaperRegisterMediaPlaybackListener(wallpaperMediaPlaybackListener);
+if (window['wallpaperRegisterMediaPlaybackListener']) {
+    window['wallpaperRegisterMediaPlaybackListener'](wallpaperMediaPlaybackListener);
 }
 
 function updateAppsUIState() {
@@ -416,7 +409,14 @@ function updateAppsUIState() {
 
     if (mediaWrapper) {
         if (isActive) {
-            mediaWrapper.classList.add('apps-active', 'spotify-active');
+            mediaWrapper.classList.add('apps-active');
+
+            if (isSpotifyMedia(systemMediaData.cover, systemMediaData.appId)) {
+                mediaWrapper.classList.add('spotify-active');
+            } else {
+                mediaWrapper.classList.remove('spotify-active');
+            }
+
             if (timerTooltip) timerTooltip.classList.add('hide-tooltip');
             if (slider) slider.style.pointerEvents = 'none';
 
@@ -446,7 +446,7 @@ function parseLRC(lrcText) {
     if (!lrcText) return [];
     const lines = lrcText.split('\n');
     const result = [];
-    const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+    const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})](.*)/;
 
     for (let line of lines) {
         const match = line.match(regex);
@@ -480,7 +480,7 @@ function fetchSyncedLyrics(title, artist) {
     stopLyricMarquee();
     updateLyricUI("Searching lyrics...", "");
 
-    const cleanTitle = encodeURIComponent(title.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim());
+    const cleanTitle = encodeURIComponent(title.replace(/\(.*?\)/g, '').replace(/\[.*?]/g, '').trim());
     const cleanArtist = encodeURIComponent((artist || "").split(',')[0].split('/')[0].split('-')[0].trim());
 
     fetch(`https://lrclib.net/api/get?track_name=${cleanTitle}&artist_name=${cleanArtist}`)
@@ -777,7 +777,6 @@ let songPaths = [
 
 let songsDivs = [];
 let songInterval;
-let songCurrentDuration = 0;
 let currentSong;
 let currentSongIndex = 0;
 let playlistPage = 0;
@@ -1114,8 +1113,7 @@ document.addEventListener("mouseup", (e) => {
         const targetPercent = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
 
         if (currentSong && currentSong.audio && !isNaN(currentSong.audio.duration)) {
-            const targetTime = (targetPercent / 100) * currentSong.audio.duration;
-            currentSong.audio.currentTime = targetTime;
+            currentSong.audio.currentTime = (targetPercent / 100) * currentSong.audio.duration;
         }
 
         animateSliderToAudio(sliderMouseDownValue, 1500);
@@ -1185,6 +1183,24 @@ settingsMenu.addEventListener("click", () => {
         startAutoScrollSettings();
     }
 });
+
+if (resyncMenu) {
+    resyncMenu.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!isAppsConnectPlaying()) return;
+
+        resyncMenu.classList.remove("spinning");
+        void resyncMenu.offsetWidth;
+        resyncMenu.classList.add("spinning");
+
+        lastTrackKey = "";
+        stopLyricMarquee();
+        updateSystemMediaPlayer();
+
+        let startPercent = parseFloat(slider.value) || 0;
+        animateSliderToAudio(startPercent, 1000);
+    });
+}
 
 backPage.addEventListener("click", () => {
     playlistPage--;
@@ -1355,7 +1371,7 @@ function songOnEndListener() {
     if (playMode === 2) {
         let startPercent = parseFloat(slider.value) || 100;
         currentSong.audio.currentTime = 0;
-        currentSong.audio.play();
+        currentSong.audio.play().catch(() => {});
         animateSliderToAudio(startPercent, 1500);
         return;
     }
@@ -1388,11 +1404,10 @@ function triggerCrossfade() {
     const newAudio = new Audio(nextSongPath);
     newAudio.volume = 0;
 
-    const nextSongProps = {
+    currentSong = {
         audio: newAudio,
         tags: {}
     };
-    currentSong = nextSongProps;
 
     const songPathStr = songPaths[currentSongIndex];
 
@@ -1729,7 +1744,7 @@ function toggleMenu() {
 }
 
 function wallpaperMediaPlaybackListener(event) {
-    isPlayingOtherMedia = (event.state == window.wallpaperMediaIntegration.PLAYBACK_PLAYING);
+    isPlayingOtherMedia = Boolean(window['wallpaperMediaIntegration'] && event.state === window['wallpaperMediaIntegration']['PLAYBACK_PLAYING']);
     systemMediaData.isPlaying = isPlayingOtherMedia;
 
     if (isPlayingOtherMedia) {
@@ -1941,7 +1956,7 @@ function getSongCoverImage(songPath, tags) {
         return songGifs[songPath];
     }
 
-    if (tags && tags.picture && tags.picture.data) {
+    if (tags && tags['picture'] && tags['picture']['data']) {
         try {
             return getPictureFromTags(tags);
         } catch (e) {
@@ -1986,8 +2001,8 @@ function updatePlayer(title, album, artist, year, image, songDuration) {
 
 function updateInfoPanel(tags, audio, image) {
     tags = tags || {};
-    const title = tags.title || songPaths[currentSongIndex].slice(0, -4);
-    const artist = tags.artist || "Inabakumori";
+    const title = tags['title'] || songPaths[currentSongIndex].slice(0, -4);
+    const artist = tags['artist'] || "Inabakumori";
 
     document.getElementById("info-title").textContent = title;
     document.getElementById("info-artist").textContent = artist;
@@ -2006,13 +2021,15 @@ function renderInfo() {
     let html = "";
 
     const tags = (currentSong && currentSong.tags) ? currentSong.tags : {};
-    const songTitle = tags.title || songPaths[currentSongIndex].slice(0, -4);
+    const songTitle = tags['title'] || songPaths[currentSongIndex].slice(0, -4);
 
     if (cat === "Description") {
         html += row("Title", songTitle);
-        html += row("Subtitle", tags.album || "Inabakumori Songs");
+        html += row("Subtitle", tags['album'] || "Inabakumori Songs");
         html += row("Rating", "★★★★★");
-        html += row("Comments", (tags.comment && tags.comment.text) || "None");
+        const commentObj = tags['comment'];
+        const commentVal = (commentObj && typeof commentObj === 'object' && commentObj['text']) ? commentObj['text'] : (typeof commentObj === 'string' ? commentObj : "None");
+        html += row("Comments", commentVal);
     }
 
     if (cat === "Audio") {
@@ -2022,21 +2039,21 @@ function renderInfo() {
     }
 
     if (cat === "Media") {
-        html += row("Album", tags.album || "Inabakumori Songs");
-        html += row("Year", tags.year || "Unknown");
-        html += row("Genre", tags.genre || "Vocaloid");
-        html += row("Track", tags.track || (currentSongIndex + 1));
+        html += row("Album", tags['album'] || "Inabakumori Songs");
+        html += row("Year", tags['year'] || "Unknown");
+        html += row("Genre", tags['genre'] || "Vocaloid");
+        html += row("Track", tags['track'] || (currentSongIndex + 1));
     }
 
     if (cat === "Origin") {
-        html += row("Publisher", getTagValue(tags.TPUB));
-        html += row("Encoded by", getTagValue(tags.TENC));
+        html += row("Publisher", getTagValue(tags['TPUB']));
+        html += row("Encoded by", getTagValue(tags['TENC']));
     }
 
     if (cat === "Content") {
-        html += row("Composer", getTagValue(tags.TCOM));
-        html += row("BPM", getTagValue(tags.TBPM));
-        html += row("Genre", tags.genre || "Vocaloid");
+        html += row("Composer", getTagValue(tags['TCOM']));
+        html += row("BPM", getTagValue(tags['TBPM']));
+        html += row("Genre", tags['genre'] || "Vocaloid");
     }
 
     contentDisplay.innerHTML = html;
@@ -2219,7 +2236,7 @@ function bindSettingsEvents() {
     const crossfadeSlider = document.getElementById("crossfade-slider");
     if (crossfadeSlider) {
         crossfadeSlider.oninput = (e) => {
-            crossfadeDuration = parseInt(e.target.value);
+            crossfadeDuration = parseInt(e.target.value, 10);
             const valText = document.getElementById("crossfade-val-text");
             if (valText) valText.textContent = `${crossfadeDuration}s`;
             updateCrossfadeSliderFill(crossfadeDuration);
@@ -2345,14 +2362,14 @@ function loadAudio(audioFileName) {
             .then(data => {
                 const blob = new Blob([data]);
                 const songAudio = new Audio(audioFileName);
-                jsmediatags.read(blob, {
-                    onSuccess: (tags) => {
-                        resolve({ tags: tags.tags || {}, audio: songAudio });
-                    },
-                    onError: () => {
-                        resolve({ tags: {}, audio: songAudio });
-                    }
-                });
+                const tagHandlers = {};
+                tagHandlers['on' + 'Success'] = (tags) => {
+                    resolve({ tags: (tags && tags['tags']) || {}, audio: songAudio });
+                };
+                tagHandlers['on' + 'Error'] = () => {
+                    resolve({ tags: {}, audio: songAudio });
+                };
+                jsmediatags.read(blob, tagHandlers);
             })
             .catch(error => {
                 reject(error);
@@ -2361,10 +2378,10 @@ function loadAudio(audioFileName) {
 }
 
 function getPictureFromTags(tags) {
-    if (!tags || !tags.picture) return "assets/icons/inaba_512.png";
+    if (!tags || !tags['picture']) return "assets/icons/inaba_512.png";
 
-    const imageData = tags.picture.data;
-    const imageFormat = tags.picture.format;
+    const imageData = tags['picture']['data'];
+    const imageFormat = tags['picture']['format'];
 
     let base64string = '';
     for (let i = 0; i < imageData.length; i++) {
@@ -2395,7 +2412,7 @@ function formatYear(year) {
     const match = String(year).match(/\d{4}/);
     if (!match) return "Unknown Release";
 
-    const y = parseInt(match[0]);
+    const y = parseInt(match[0], 10);
 
     const now = new Date();
     const releaseDate = new Date(y, 0, 1);
@@ -2424,9 +2441,10 @@ function getTagValue(tag) {
 
     if (typeof tag === "string") return tag;
 
-    if (tag.data) return tag.data;
-
-    if (tag.text) return tag.text;
+    if (typeof tag === "object") {
+        if (tag['data']) return tag['data'];
+        if (tag['text']) return tag['text'];
+    }
 
     return "Unknown";
 }
@@ -2475,7 +2493,7 @@ if (selectorNav) {
 
     musicObserver.observe(selectorNav, { attributes: true, attributeFilter: ['class'] });
 
-    pageSelector.querySelectorAll('i').forEach(navBtn => {
+    selectorNav.querySelectorAll('i').forEach(navBtn => {
         navBtn.addEventListener('click', () => {
             setTimeout(handlePageSelectorState, 50);
         });
